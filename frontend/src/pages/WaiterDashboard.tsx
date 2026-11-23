@@ -69,7 +69,11 @@ export const WaiterDashboard: React.FC = () => {
       });
     });
 
+    // Auto-poll floor status every 4s
+    const pollId = setInterval(loadFloor, 4000);
+
     return () => {
+      clearInterval(pollId);
       window.removeEventListener('lowkey_waiter_update', handleSync);
       wsService.unsubscribe(subTables);
       wsService.unsubscribe(subRequests);

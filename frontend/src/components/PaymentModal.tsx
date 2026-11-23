@@ -85,6 +85,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       // Step B: Verify payment on backend securely with signature
       const verifyRes = await billingApi.verifyPayment({
+        billId: bill.id,
+        tipAmount: calculatedTip,
         paymentReference: payment.paymentReference,
         razorpayOrderId: payment.gatewayOrderId,
         razorpayPaymentId: 'pay_mock_' + Math.random().toString(36).substring(7),
@@ -115,6 +117,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       const res = await billingApi.recordCashPayment({
         billId: bill.id,
         amount: payableTotal,
+        tipAmount: calculatedTip,
       });
       confetti({ particleCount: 50, spread: 45 });
       onPaymentSuccess(res.data);

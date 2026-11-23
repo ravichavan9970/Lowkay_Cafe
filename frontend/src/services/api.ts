@@ -18,6 +18,7 @@ import {
   MOCK_STAFF,
   MOCK_SETTINGS,
 } from './mockData';
+import { cloudSync } from './cloudSyncService';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
 
@@ -239,9 +240,8 @@ export const orderApi = {
         }),
       };
 
-      const existing = JSON.parse(localStorage.getItem('lowkey_demo_orders') || '[]');
-      localStorage.setItem('lowkey_demo_orders', JSON.stringify([newOrder, ...existing]));
-      return { data: newOrder };
+      const saved = await cloudSync.createOrder(newOrder);
+      return { data: saved };
     }
   },
   trackOrder: async (orderCode: string): Promise<{ data: Order }> => {
@@ -252,9 +252,8 @@ export const orderApi = {
       }
       return res;
     } catch {
-      const existing: Order[] = JSON.parse(localStorage.getItem('lowkey_demo_orders') || '[]');
-      const found = existing.find((o) => o.orderCode === orderCode) || MOCK_ORDERS.find((o) => o.orderCode === orderCode) || MOCK_ORDERS[0];
-      return { data: found };
+      const found = await cloudSync.getOrderByCode(orderCode);
+      return { data: found || MOCK_ORDERS[0] };
     }
   },
   getOrdersByTable: (tableNum: number) =>
@@ -276,11 +275,18 @@ export const kitchenApi = {
         { id: 4, name: 'Dessert Station' },
       ]
     ),
-  getOrders: () =>
-    safeApiCall(() => api.get<Order[]>('/kitchen/orders'), () => {
-      const saved: Order[] = JSON.parse(localStorage.getItem('lowkey_demo_orders') || '[]');
-      return [...saved, ...MOCK_ORDERS];
-    }),
+  getOrders: async (): Promise<{ data: Order[] }> => {
+    try {
+      const res = await api.get<Order[]>('/kitchen/orders');
+      if (isHtmlResponse(res.data) || !Array.isArray(res.data)) {
+        throw new Error('Invalid kitchen orders response');
+      }
+      return res;
+    } catch {
+      const orders = await cloudSync.getOrders();
+      return { data: orders };
+    }
+  },
   getOrdersByStation: (stationId: number) =>
     safeApiCall(() => api.get<Order[]>(`/kitchen/orders/station/${stationId}`), MOCK_ORDERS),
   updateOrderStatus: async (orderId: number, status: string, reason?: string) => {
@@ -291,59 +297,8 @@ export const kitchenApi = {
       }
       return res;
     } catch {
-      // Find the order in localStorage or MOCK_ORDERS, update its status, and return full order
-      const savedOrders: Order[] = JSON.parse(localStorage.getItem('lowkey_demo_orders') || '[]');
-      const allOrders = [...savedOrders, ...MOCK_ORDERS];
-      const existing = allOrders.find((o) => o.id === orderId);
-
-      const updatedOrder: Order = existing
-        ? { ...existing, status: status as any }
-        : {
-            id: orderId,
-            orderCode: `ORD-${orderId}`,
-            tableNumber: 4,
-            customerName: 'Aarav Sharma',
-            customerPhone: '+91 98765 43210',
-            status: status as any,
-            subtotal: 748,
-            taxAmount: 37.4,
-            serviceCharge: 37.4,
-            discountAmount: 0,
-            grandTotal: 822.8,
-            estimatedPrepMinutes: 12,
-            createdAt: new Date().toISOString(),
-            items: [
-              {
-                id: 1,
-                foodItemId: 1,
-                foodItemName: 'Truffle Parmesan Fries',
-                foodItemImage: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80',
-                categoryName: 'Starters',
-                quantity: 1,
-                unitPrice: 249,
-                subtotal: 249,
-                selectedPortion: 'Full',
-                selectedSpiceLevel: 'MILD',
-                status: status as any,
-                stationId: 1,
-                customizations: [],
-              },
-            ],
-          };
-
-      if (!Array.isArray(updatedOrder.items)) {
-        updatedOrder.items = [];
-      }
-
-      // Persist in localStorage
-      const filtered = savedOrders.filter((o) => o.id !== orderId);
-      if (status !== 'SERVED' && status !== 'COMPLETED' && status !== 'CANCELLED') {
-        localStorage.setItem('lowkey_demo_orders', JSON.stringify([updatedOrder, ...filtered]));
-      } else {
-        localStorage.setItem('lowkey_demo_orders', JSON.stringify(filtered));
-      }
-
-      return { data: updatedOrder };
+      const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason);
+      return { data: updated || ({ id: orderId, status, items: [] } as any) };
     }
   },
 };
@@ -475,29 +430,8 @@ export const billingApi = {
       }
       return res;
     } catch {
-      const mockBill: Bill = {
-        id: orderId,
-        billNumber: `BILL-${orderId}`,
-        orderId,
-        orderCode: `ORD-${orderId}`,
-        tableNumber: 4,
-        subtotal: 748,
-        taxAmount: 37.4,
-        serviceCharge: 37.4,
-        discountAmount: 0,
-        tipAmount: 0,
-        loyaltyDiscount: 0,
-        finalPayableAmount: 822.8,
-        paidAmount: 0,
-        status: 'UNPAID',
-        createdAt: new Date().toISOString(),
-        splits: [],
-        items: [
-          { id: 1, itemName: 'Truffle Parmesan Fries', quantity: 1, unitPrice: 249, totalPrice: 249 },
-          { id: 2, itemName: 'Artisan Burrata Margherita', quantity: 1, unitPrice: 499, totalPrice: 499 },
-        ],
-      };
-      return { data: mockBill };
+      const bill = await cloudSync.getBillForOrder(orderId);
+      return { data: bill };
     }
   },
   applyTip: (billId: number, data: any) =>
@@ -505,11 +439,35 @@ export const billingApi = {
   splitBill: (billId: number, data: any) =>
     safeApiCall(() => api.post<Bill>(`/billing/${billId}/split`, data), { id: billId, splitType: data.splitType } as any),
   initiatePayment: (data: any) =>
-    safeApiCall(() => api.post<any>('/billing/pay/initiate', data), { paymentReference: `PAY-${Date.now()}`, keyId: 'rzp_test_LowkeyCafe', amount: 82280 }),
-  verifyPayment: (data: any) =>
-    safeApiCall(() => api.post<Bill>('/billing/pay/verify', data), { id: 1, status: 'PAID' } as any),
-  recordCashPayment: (data: any) =>
-    safeApiCall(() => api.post<Bill>('/billing/pay/cash', data), { id: 1, status: 'PAID' } as any),
+    safeApiCall(() => api.post<any>('/billing/pay/initiate', data), { paymentReference: `PAY-${Date.now()}`, gatewayOrderId: `order_${Date.now()}`, keyId: 'rzp_test_LowkeyCafe', amount: data.amount * 100 }),
+  verifyPayment: async (data: any): Promise<{ data: Bill }> => {
+    try {
+      const res = await api.post<Bill>('/billing/pay/verify', data);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.items) {
+        throw new Error('Invalid verify payment response');
+      }
+      return res;
+    } catch {
+      const billId = data.billId || 1;
+      const bill = await cloudSync.getBillForOrder(billId);
+      const paidBill = await cloudSync.recordPayment(bill, data.tipAmount || 0, 'UPI');
+      return { data: paidBill };
+    }
+  },
+  recordCashPayment: async (data: any): Promise<{ data: Bill }> => {
+    try {
+      const res = await api.post<Bill>('/billing/pay/cash', data);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.items) {
+        throw new Error('Invalid cash payment response');
+      }
+      return res;
+    } catch {
+      const billId = data.billId || 1;
+      const bill = await cloudSync.getBillForOrder(billId);
+      const paidBill = await cloudSync.recordPayment(bill, data.tipAmount || 0, 'CASH');
+      return { data: paidBill };
+    }
+  },
   downloadPdfUrl: (billId: number) => `/api/billing/${billId}/receipt/pdf`,
   emailReceipt: (billId: number, email: string) =>
     safeApiCall(() => api.post<{ sent: boolean }>(`/billing/${billId}/receipt/email`, { email }), { sent: true }),

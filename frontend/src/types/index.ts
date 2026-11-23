@@ -213,6 +213,7 @@ export interface Bill {
   status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
   createdAt: string;
   paidAt?: string;
+  paymentMethod?: string;
   items: BillItem[];
   splits: BillSplit[];
 }

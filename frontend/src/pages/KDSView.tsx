@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { kitchenApi } from '../services/api';
 import { Order, OrderStatus } from '../types';
 import wsService from '../services/websocket';
+import { cloudSync } from '../services/cloudSyncService';
 import { Link } from 'react-router-dom';
 import {
   ChefHat,
@@ -38,11 +39,33 @@ export const KDSView: React.FC = () => {
   useEffect(() => {
     loadData();
 
-    // Subscribe to live kitchen updates via WebSocket
+    // 1. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS every 3s)
+    const unsubCloud = cloudSync.subscribeToOrders((cloudOrders) => {
+      setOrders((prev) => {
+        const activeCloud = (cloudOrders || []).filter(
+          (o) => o.status !== 'SERVED' && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+        );
+        const prevIds = new Set(prev.map((o) => o.id));
+        const hasNew = activeCloud.some((o) => !prevIds.has(o.id));
+        if (hasNew && soundEnabled) {
+          try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+            osc.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+          } catch (ignored) {}
+        }
+        return activeCloud;
+      });
+    }, 3000);
+
+    // 2. Subscribe to live kitchen updates via WebSocket
     const subId = wsService.subscribe('/topic/kitchen', (newOrUpdatedOrder: Order) => {
       console.log('⚡ KDS received WebSocket update:', newOrUpdatedOrder);
       setOrders((prev) => {
-        // If order is completed or cancelled, remove from kitchen queue
         if (newOrUpdatedOrder.status === 'COMPLETED' || newOrUpdatedOrder.status === 'CANCELLED' || newOrUpdatedOrder.status === 'SERVED') {
           return prev.filter((o) => o.id !== newOrUpdatedOrder.id);
         }
@@ -52,13 +75,12 @@ export const KDSView: React.FC = () => {
           updated[idx] = newOrUpdatedOrder;
           return updated;
         } else {
-          // Play audio alert if enabled
           if (soundEnabled) {
             try {
               const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
               const osc = audioCtx.createOscillator();
               osc.type = 'sine';
-              osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+              osc.frequency.setValueAtTime(880, audioCtx.currentTime);
               osc.connect(audioCtx.destination);
               osc.start();
               osc.stop(audioCtx.currentTime + 0.3);
@@ -70,6 +92,7 @@ export const KDSView: React.FC = () => {
     });
 
     return () => {
+      unsubCloud();
       wsService.unsubscribe(subId);
     };
   }, [soundEnabled]);

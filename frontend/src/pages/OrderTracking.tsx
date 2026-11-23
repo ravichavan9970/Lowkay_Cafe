@@ -64,7 +64,25 @@ export const OrderTracking: React.FC = () => {
   useEffect(() => {
     fetchOrder();
 
-    // Subscribe to live WebSocket updates for this specific order
+    // 1. Live auto-polling from cloud (syncs across Kitchen KDS and customer's mobile phone)
+    const pollId = setInterval(() => {
+      if (orderCode) {
+        orderApi.trackOrder(orderCode)
+          .then((res) => {
+            if (res.data) {
+              setOrder(res.data);
+              if (res.data.id) {
+                billingApi.getBillForOrder(res.data.id)
+                  .then((bRes) => setBill(bRes.data))
+                  .catch(() => {});
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    }, 3000);
+
+    // 2. Subscribe to live WebSocket updates for this specific order
     const subId = wsService.subscribe(`/topic/orders/${orderCode}`, (updatedOrder: Order) => {
       console.log('⚡ Live Order Update received via WebSocket:', updatedOrder);
       setOrder(updatedOrder);
@@ -76,6 +94,7 @@ export const OrderTracking: React.FC = () => {
     });
 
     return () => {
+      clearInterval(pollId);
       wsService.unsubscribe(subId);
     };
   }, [orderCode]);

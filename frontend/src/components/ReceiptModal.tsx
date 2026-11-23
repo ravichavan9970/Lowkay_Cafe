@@ -99,32 +99,32 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div className="space-y-1.5 text-xs text-stone-600 pt-1">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span className="font-semibold text-stone-900">₹{bill.subtotal.toFixed(2)}</span>
+              <span className="font-semibold text-stone-900">₹{(bill?.subtotal ?? 0).toFixed(2)}</span>
             </div>
-            {bill.discountAmount > 0 && (
+            {(bill?.discountAmount ?? 0) > 0 && (
               <div className="flex justify-between text-emerald-600">
                 <span>Discount</span>
-                <span>-₹{bill.discountAmount.toFixed(2)}</span>
+                <span>-₹{(bill.discountAmount ?? 0).toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span>Taxes (GST 5%)</span>
-              <span>₹{bill.taxAmount.toFixed(2)}</span>
+              <span>₹{(bill?.taxAmount ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Service Charge (5%)</span>
-              <span>₹{bill.serviceCharge.toFixed(2)}</span>
+              <span>₹{(bill?.serviceCharge ?? 0).toFixed(2)}</span>
             </div>
-            {bill.tipAmount > 0 && (
+            {(bill?.tipAmount ?? 0) > 0 && (
               <div className="flex justify-between text-amber-700">
                 <span>Server Tip / Gratuity</span>
-                <span>+₹{bill.tipAmount.toFixed(2)}</span>
+                <span>+₹{(bill.tipAmount ?? 0).toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-base font-extrabold text-stone-950 pt-2 border-t border-stone-200">
               <span>Final Total Paid</span>
               <span className="font-display font-black text-brand-600">
-                ₹{bill.finalPayableAmount.toFixed(2)}
+                ₹{(bill?.finalPayableAmount ?? 0).toFixed(2)}
               </span>
             </div>
           </div>
