@@ -25,16 +25,21 @@ import {
   Heart,
   Copy,
   Check,
+  Camera,
 } from 'lucide-react';
 import { MOCK_TABLES, MOCK_FOOD_ITEMS, MOCK_CATEGORIES } from '../services/mockData';
 import { Table, FoodItem, Category } from '../types';
 import { generateQrDataUrl, downloadQrCode, getLiveQrUrl } from '../services/qrService';
+import CameraQrScanner from '../components/CameraQrScanner';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Selected zone filter for table viewer
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
+
+  // Camera QR scanner modal
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
 
   // Interactive full menu state inside Landing Page
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<number | 'ALL'>('ALL');
@@ -134,6 +139,14 @@ export const LandingPage: React.FC = () => {
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setShowCameraScanner(true)}
+              className="px-3 sm:px-4 py-2 rounded-full bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/50 text-yellow-300 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              title="Scan Table QR with Camera"
+            >
+              <Camera className="w-3.5 h-3.5 text-yellow-400 stroke-[2.5]" />
+              <span>Scan QR</span>
+            </button>
             <a
               href="#takeaway-qr"
               className="px-3 sm:px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-yellow-400/40 text-yellow-300 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
@@ -177,22 +190,21 @@ export const LandingPage: React.FC = () => {
           </p>
 
           {/* Primary Action Buttons */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-lg mx-auto">
-            <a
-              href="#menu"
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-xl mx-auto">
+            <button
+              onClick={() => setShowCameraScanner(true)}
               className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-yellow-400/25 active:scale-95 transition-all"
             >
-              <UtensilsCrossed className="w-4 h-4 stroke-[2.5]" />
-              <span>Browse Full Menu</span>
-              <ArrowRight className="w-4 h-4 ml-1 stroke-[2.5]" />
-            </a>
+              <Camera className="w-4 h-4 stroke-[2.5]" />
+              <span>Scan Table Stand</span>
+            </button>
 
             <a
-              href="#dine-in-tables"
+              href="#menu"
               className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
             >
-              <QrCode className="w-4 h-4 text-yellow-400 stroke-[2.5]" />
-              <span>Dine-In Tables</span>
+              <UtensilsCrossed className="w-4 h-4 stroke-[2.5]" />
+              <span>Browse Menu</span>
             </a>
 
             <a
@@ -200,7 +212,7 @@ export const LandingPage: React.FC = () => {
               className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
             >
               <ShoppingBag className="w-4 h-4 text-yellow-400" />
-              <span>Takeaway / Outside QR</span>
+              <span>Takeaway QR</span>
             </a>
           </div>
 
@@ -245,21 +257,31 @@ export const LandingPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Zone Filter Tabs */}
-            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-black border border-neutral-800 overflow-x-auto">
-              {zones.map((zone) => (
-                <button
-                  key={zone}
-                  onClick={() => setSelectedZone(zone)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
-                    selectedZone === zone
-                      ? 'bg-yellow-400 text-black shadow-md'
-                      : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  {zone === 'ALL' ? 'All Tables (10)' : zone}
-                </button>
-              ))}
+            {/* Actions & Zone Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setShowCameraScanner(true)}
+                className="px-4 py-2 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
+              >
+                <Camera className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Open Camera Scanner</span>
+              </button>
+
+              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-black border border-neutral-800 overflow-x-auto">
+                {zones.map((zone) => (
+                  <button
+                    key={zone}
+                    onClick={() => setSelectedZone(zone)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
+                      selectedZone === zone
+                        ? 'bg-yellow-400 text-black shadow-md'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {zone === 'ALL' ? 'All Tables (10)' : zone}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -453,11 +475,9 @@ export const LandingPage: React.FC = () => {
                       className="w-56 h-56 object-contain rounded-lg"
                     />
                   ) : (
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(getLiveQrUrl('/takeaway'))}`}
-                      alt="Takeaway Ordering QR Code"
-                      className="w-56 h-56 object-contain rounded-lg"
-                    />
+                    <div className="w-56 h-56 flex items-center justify-center">
+                      <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
                   )}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 backdrop-blur-[2px] transition-opacity rounded-xl">
                     <span className="px-3 py-1 rounded-lg bg-yellow-400 text-black text-xs font-black shadow-lg">
@@ -865,11 +885,9 @@ export const LandingPage: React.FC = () => {
                   className="w-56 h-56 object-contain"
                 />
               ) : (
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(getLiveQrUrl(activeQrModal.url))}`}
-                  alt={activeQrModal.title}
-                  className="w-56 h-56 object-contain"
-                />
+                <div className="w-56 h-56 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                </div>
               )}
             </div>
 
@@ -918,6 +936,14 @@ export const LandingPage: React.FC = () => {
 
           </div>
         </div>
+      )}
+
+      {/* Built-in Live Camera QR Scanner Modal */}
+      {showCameraScanner && (
+        <CameraQrScanner
+          isOpen={showCameraScanner}
+          onClose={() => setShowCameraScanner(false)}
+        />
       )}
 
     </div>

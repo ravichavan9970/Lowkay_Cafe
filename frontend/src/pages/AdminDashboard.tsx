@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { adminApi, tableApi, menuApi } from '../services/api';
 import { Table, FoodItem, Category } from '../types';
 import wsService from '../services/websocket';
+import { generateQrDataUrl, downloadQrCode, getLiveQrUrl } from '../services/qrService';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -29,6 +30,31 @@ import {
   Smartphone,
   AlertCircle,
 } from 'lucide-react';
+
+const TableQrImage: React.FC<{ targetUrl?: string; tableNumber: number }> = ({ targetUrl, tableNumber }) => {
+  const [dataUrl, setDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    const url = targetUrl || `https://lowkey-cafe-three.vercel.app/table/${tableNumber}`;
+    generateQrDataUrl(url).then(setDataUrl).catch(console.error);
+  }, [targetUrl, tableNumber]);
+
+  if (!dataUrl) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={dataUrl}
+      alt={`Table ${tableNumber} QR`}
+      className="w-full h-full object-contain"
+    />
+  );
+};
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tables' | 'menu' | 'staff' | 'settings' | 'orders'>('overview');
@@ -577,15 +603,9 @@ export const AdminDashboard: React.FC = () => {
 
                   {/* QR Image */}
                   <div className="w-36 h-36 bg-white border border-stone-200 rounded-2xl p-2 flex items-center justify-center shadow-inner relative group">
-                    <img
-                      src={
-                        table.qrImageData ||
-                        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(
-                          table.qrTargetUrl || `https://lowkey-cafe-three.vercel.app/table/${table.tableNumber}`
-                        )}`
-                      }
-                      alt={`Table ${table.tableNumber} QR`}
-                      className="w-full h-full object-contain"
+                    <TableQrImage
+                      targetUrl={table.qrTargetUrl}
+                      tableNumber={table.tableNumber}
                     />
                   </div>
 
@@ -998,16 +1018,10 @@ export const AdminDashboard: React.FC = () => {
               </span>
               <p className="text-xs text-stone-500 mb-3">Scan to order & pay</p>
               
-              <div className="w-48 h-48 mx-auto bg-stone-50 p-2 border border-stone-200 rounded-xl mb-3 flex items-center justify-center">
-                <img
-                  src={
-                    selectedQrTable.qrImageData ||
-                    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(
-                      selectedQrTable.qrTargetUrl || `https://lowkey-cafe-three.vercel.app/table/${selectedQrTable.tableNumber}`
-                    )}`
-                  }
-                  alt={`Table ${selectedQrTable.tableNumber} QR`}
-                  className="w-full h-full object-contain"
+              <div className="w-48 h-48 mx-auto bg-white p-2 border border-stone-200 rounded-xl mb-3 flex items-center justify-center">
+                <TableQrImage
+                  targetUrl={selectedQrTable.qrTargetUrl}
+                  tableNumber={selectedQrTable.tableNumber}
                 />
               </div>
 

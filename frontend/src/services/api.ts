@@ -582,16 +582,14 @@ export const adminApi = {
   createTable: (data: any) => {
     const base = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app';
     const targetUrl = `${base}/table/${data.tableNumber}`;
-    const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(targetUrl)}`;
-    return safeApiCall(() => api.post<Table>('/admin/tables', data), { id: Date.now(), tableNumber: data.tableNumber, seatingCapacity: data.seatingCapacity, floorZone: data.floorZone, status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: targetUrl, qrImageData: qrImg });
+    return safeApiCall(() => api.post<Table>('/admin/tables', data), { id: Date.now(), tableNumber: data.tableNumber, seatingCapacity: data.seatingCapacity, floorZone: data.floorZone, status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: targetUrl, qrImageData: '' });
   },
   regenerateQr: (tableNum: number, baseUrl?: string) => {
     const base = baseUrl || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app');
     const targetUrl = `${base}/table/${tableNum}`;
-    const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(targetUrl)}`;
     return safeApiCall(
       () => api.post<Table>(`/admin/tables/${tableNum}/regenerate-qr${baseUrl ? `?baseUrl=${encodeURIComponent(baseUrl)}` : ''}`),
-      { id: tableNum, tableNumber: tableNum, seatingCapacity: 4, floorZone: 'Indoor Lounge', status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: targetUrl, qrImageData: qrImg }
+      { id: tableNum, tableNumber: tableNum, seatingCapacity: 4, floorZone: 'Indoor Lounge', status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: targetUrl, qrImageData: '' }
     );
   },
   regenerateAllQr: (baseUrl?: string) => {
@@ -603,7 +601,7 @@ export const adminApi = {
         return {
           ...t,
           qrTargetUrl: targetUrl,
-          qrImageData: `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(targetUrl)}`,
+          qrImageData: '',
         };
       })
     );

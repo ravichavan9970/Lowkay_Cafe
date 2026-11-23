@@ -55,10 +55,21 @@ export const generateQrDataUrl = async (targetPathOrUrl: string): Promise<string
     qrCache.set(fullUrl, dataUrl);
     return dataUrl;
   } catch (err) {
-    console.error('Failed to generate local QR code, falling back to public generator', err);
-    // Reliable fallback
-    const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&color=000000&bgcolor=ffffff&data=${encodeURIComponent(fullUrl)}`;
-    return fallbackUrl;
+    console.warn('QRCode.toDataURL failed, using offline SVG generator', err);
+    try {
+      const svg = await QRCode.toString(fullUrl, {
+        type: 'svg',
+        margin: 2,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#000000', light: '#ffffff' },
+      });
+      const svgDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+      qrCache.set(fullUrl, svgDataUrl);
+      return svgDataUrl;
+    } catch (svgErr) {
+      console.error('Offline QR generation error', svgErr);
+      return '';
+    }
   }
 };
 

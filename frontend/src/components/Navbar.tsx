@@ -11,11 +11,14 @@ import {
   LayoutDashboard,
   Monitor,
   Users,
+  QrCode,
+  Camera,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import CallWaiterModal from './CallWaiterModal';
 import WifiBanner from './WifiBanner';
+import CameraQrScanner from './CameraQrScanner';
 
 interface NavbarProps {
   onOpenCart?: () => void;
@@ -26,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
   const { user, logout, hasRole } = useAuth();
   const [showCallWaiter, setShowCallWaiter] = useState(false);
   const [showWifi, setShowWifi] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const navigate = useNavigate();
 
   return (
@@ -74,6 +78,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
             >
               <Wifi className="w-3.5 h-3.5 text-yellow-400" />
               <span className="hidden sm:inline">Wi-Fi</span>
+            </button>
+
+            {/* In-App Table QR Camera Scanner Button */}
+            <button
+              onClick={() => setShowScanner(true)}
+              className="px-3.5 py-2 rounded-full bg-yellow-400/15 hover:bg-yellow-400/25 border border-yellow-400/40 text-yellow-300 hover:text-yellow-200 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              title="Scan Table QR Stand with Camera"
+            >
+              <Camera className="w-3.5 h-3.5 text-yellow-400 stroke-[2.5]" />
+              <span className="hidden sm:inline">Scan Table</span>
             </button>
 
             {/* Call Waiter Pill (Only for Dine-in with tableNumber) */}
@@ -176,6 +190,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
 
       {showWifi && (
         <WifiBanner onClose={() => setShowWifi(false)} />
+      )}
+
+      {showScanner && (
+        <CameraQrScanner
+          isOpen={showScanner}
+          onClose={() => setShowScanner(false)}
+        />
       )}
     </>
   );

@@ -621,7 +621,7 @@ export const MOCK_TABLES: Table[] = Array.from({ length: 10 }, (_, i) => {
     isActive: true,
     accessToken: `demo-token-tbl-${num}`,
     qrTargetUrl: fullTargetUrl,
-    qrImageData: `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(fullTargetUrl)}`,
+    qrImageData: '',
   };
 });
 

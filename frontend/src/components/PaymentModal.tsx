@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bill } from '../types';
 import { billingApi } from '../services/api';
+import { generateQrDataUrl } from '../services/qrService';
 import confetti from 'canvas-confetti';
 import {
   X,
@@ -30,6 +31,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [customTip, setCustomTip] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [cashRequested, setCashRequested] = useState(false);
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState<string>('');
 
   // Tip calculation
   let calculatedTip = 0;
@@ -45,6 +47,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8892');
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvv, setCardCvv] = useState('742');
+
+  useEffect(() => {
+    const upiPayload = `upi://pay?pa=lowkeycafe@upi&pn=Lowkey%20Cafe&am=${payableTotal}&cu=INR`;
+    generateQrDataUrl(upiPayload).then(setUpiQrDataUrl).catch(console.error);
+  }, [payableTotal]);
 
   const handleApplyTipAndPay = async () => {
     setIsProcessing(true);
@@ -251,11 +258,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {selectedMethod === 'UPI' && (
                 <div className="flex flex-col items-center text-center">
                   <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-inner border border-stone-200 mb-2 flex items-center justify-center">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(`upi://pay?pa=lowkeycafe@upi&pn=Lowkey%20Cafe&am=${payableTotal}&cu=INR`)}`}
-                      alt="UPI QR Code"
-                      className="w-full h-full object-contain"
-                    />
+                    {upiQrDataUrl ? (
+                      <img
+                        src={upiQrDataUrl}
+                        alt="UPI QR Code"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    )}
                   </div>
                   <span className="text-[11px] font-mono text-stone-600 font-semibold">
                     UPI ID: lowkeycafe@upi
