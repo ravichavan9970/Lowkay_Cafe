@@ -1,0 +1,2 @@
+-- Lowkey Cafe Complete Database Schema Documentation
+-- See full DDL in backend/src/main/resources/schema-mysql.sql
