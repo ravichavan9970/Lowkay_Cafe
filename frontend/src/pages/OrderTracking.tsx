@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { orderApi, billingApi } from '../services/api';
+import { orderApi, billingApi, kitchenApi } from '../services/api';
 import { Order, Bill, OrderStatus } from '../types';
 import wsService from '../services/websocket';
 import { Navbar } from '../components/Navbar';
@@ -22,6 +22,7 @@ import {
   Flame,
   ArrowRight,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 
 const STATUS_STEPS: { status: OrderStatus; label: string; desc: string; icon: any }[] = [
@@ -98,6 +99,40 @@ export const OrderTracking: React.FC = () => {
       wsService.unsubscribe(subId);
     };
   }, [orderCode]);
+
+  // Fast-forward next status for demo simulation
+  const handleFastForwardStatus = async () => {
+    if (!order) return;
+    let nextStatus: OrderStatus = 'READY';
+    if (order.status === 'NEW_ORDER' || order.status === 'ACCEPTED') {
+      nextStatus = 'PREPARING';
+    } else if (order.status === 'PREPARING') {
+      nextStatus = 'READY';
+    } else if (order.status === 'READY') {
+      nextStatus = 'SERVED';
+    } else if (order.status === 'SERVED') {
+      nextStatus = 'COMPLETED';
+    }
+
+    try {
+      const res = await kitchenApi.updateOrderStatus(order.id, nextStatus);
+      if (res.data) {
+        setOrder(res.data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Auto-advance simulation after 35s in PREPARING so diner is never stuck
+  useEffect(() => {
+    if (order?.status === 'PREPARING') {
+      const timer = setTimeout(() => {
+        handleFastForwardStatus();
+      }, 35000);
+      return () => clearTimeout(timer);
+    }
+  }, [order?.status]);
 
   if (loading) {
     return (
@@ -180,6 +215,23 @@ export const OrderTracking: React.FC = () => {
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
+              {!isCompleted && !isCancelled && (
+                <button
+                  onClick={handleFastForwardStatus}
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 text-xs font-black flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                  title="Simulate next kitchen step"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>
+                    {order.status === 'PREPARING'
+                      ? 'Mark Food Ready'
+                      : order.status === 'READY'
+                      ? 'Mark as Served'
+                      : 'Advance Status'}
+                  </span>
+                </button>
+              )}
+
               <button
                 onClick={() => setShowCallWaiter(true)}
                 className="px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold flex items-center gap-1.5 border border-stone-700 transition-colors"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { waiterApi, tableApi, billingApi } from '../services/api';
+import { waiterApi, tableApi, billingApi, kitchenApi } from '../services/api';
 import { cloudSync } from '../services/cloudSyncService';
 import { Table, WaiterRequest, Bill } from '../types';
 import wsService from '../services/websocket';
@@ -19,6 +19,8 @@ import {
   Droplets,
   HelpCircle,
   MessageSquare,
+  ChefHat,
+  Trash2,
 } from 'lucide-react';
 
 export const WaiterDashboard: React.FC = () => {
@@ -39,26 +41,48 @@ export const WaiterDashboard: React.FC = () => {
   useEffect(() => {
     loadFloor();
 
-    // 1. Subscribe to live cloud waiter requests (cross-device sync)
-    const unsubCloud = cloudSync.subscribeToWaiterRequests((reqList) => {
-      setRequests(reqList);
+    // 1. Subscribe to live cloud orders (so tables update immediately when orders placed or advance)
+    const unsubOrders = cloudSync.subscribeToOrders(() => {
+      loadFloor();
     });
 
-    // 2. Event listener for local waiter requests synchronization
+    // 2. Subscribe to live cloud waiter requests (cross-device sync)
+    const unsubWaiter = cloudSync.subscribeToWaiterRequests((reqList) => {
+      setRequests((prev) => {
+        const prevIds = new Set(prev.map((r) => r.id));
+        const hasNew = reqList.some((r) => !prevIds.has(r.id));
+        if (hasNew) {
+          try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5 note
+            osc.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+          } catch (ignored) {}
+        }
+        return reqList;
+      });
+      loadFloor();
+    });
+
+    // 3. Event listener for local waiter requests synchronization
     const handleSync = () => {
       waiterApi.getRequests().then((res) => {
         const activeList = Array.isArray(res.data) ? res.data.filter((r) => r.status !== 'RESOLVED') : [];
         setRequests(activeList);
+        loadFloor();
       }).catch(console.error);
     };
     window.addEventListener('lowkey_waiter_update', handleSync);
 
-    // 3. Subscribe to table floor updates
+    // 4. Subscribe to table floor updates
     const subTables = wsService.subscribe('/topic/tables', (updatedTable: Table) => {
       setTables((prev) => prev.map((t) => (t.id === updatedTable.id ? updatedTable : t)));
     });
 
-    // 4. Subscribe to incoming waiter requests via websocket
+    // 5. Subscribe to incoming waiter requests via websocket
     const subRequests = wsService.subscribe('/topic/waiter-requests', (newOrUpdatedReq: WaiterRequest) => {
       setRequests((prev) => {
         if (newOrUpdatedReq.status === 'RESOLVED') {
@@ -73,15 +97,51 @@ export const WaiterDashboard: React.FC = () => {
           return [newOrUpdatedReq, ...prev];
         }
       });
+      loadFloor();
     });
 
     return () => {
-      unsubCloud();
+      unsubOrders();
+      unsubWaiter();
       window.removeEventListener('lowkey_waiter_update', handleSync);
       wsService.unsubscribe(subTables);
       wsService.unsubscribe(subRequests);
     };
   }, []);
+
+  // Advance order status from table inspection drawer
+  const handleAdvanceTableOrder = async (orderId: number, status: 'READY' | 'SERVED') => {
+    try {
+      await kitchenApi.updateOrderStatus(orderId, status);
+      await loadFloor();
+      if (selectedTable) {
+        setSelectedTable((prev) => (prev ? { ...prev, status: status === 'READY' ? 'FOOD_READY' : 'OCCUPIED' } : null));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSettleTableBill = async (bill: Bill) => {
+    try {
+      await billingApi.recordCashPayment({ billId: bill.id, tipAmount: 0 });
+      await loadFloor();
+      setTableBill((prev) => (prev ? { ...prev, status: 'PAID' } : null));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClearTable = async (tableNum: number) => {
+    try {
+      await cloudSync.clearTable(tableNum);
+      await loadFloor();
+      setSelectedTable(null);
+      setTableBill(null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleAcceptRequest = async (id: number) => {
     try {
@@ -307,6 +367,46 @@ export const WaiterDashboard: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Floor Staff Action Bar */}
+              {selectedTable.activeOrderId && (
+                <div className="mt-4 pt-3 border-t border-stone-800 flex flex-wrap items-center gap-2">
+                  {(selectedTable.status === 'PREPARING' || selectedTable.status === 'ORDER_RECEIVED') && (
+                    <button
+                      onClick={() => handleAdvanceTableOrder(selectedTable.activeOrderId!, 'READY')}
+                      className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                    >
+                      <ChefHat className="w-4 h-4" />
+                      <span>Mark Food Ready</span>
+                    </button>
+                  )}
+                  {(selectedTable.status === 'FOOD_READY' || selectedTable.status === 'PREPARING' || selectedTable.status === 'OCCUPIED') && (
+                    <button
+                      onClick={() => handleAdvanceTableOrder(selectedTable.activeOrderId!, 'SERVED')}
+                      className="px-3.5 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Mark Served at Table</span>
+                    </button>
+                  )}
+                  {tableBill && tableBill.status !== 'PAID' && (
+                    <button
+                      onClick={() => handleSettleTableBill(tableBill)}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                    >
+                      <Banknote className="w-4 h-4" />
+                      <span>Settle Bill (₹{tableBill.finalPayableAmount})</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleClearTable(selectedTable.tableNumber)}
+                    className="px-3 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white font-bold text-xs flex items-center gap-1.5 border border-stone-700 transition-all ml-auto"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-stone-400" />
+                    <span>Clear Table</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

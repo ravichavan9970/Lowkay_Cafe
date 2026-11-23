@@ -1,5 +1,5 @@
-import { Order, OrderStatus, WaiterRequest, Bill } from '../types';
-import { MOCK_ORDERS, MOCK_WAITER_REQUESTS } from './mockData';
+import { Order, OrderStatus, WaiterRequest, Bill, Table } from '../types';
+import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
 // High-speed, unlimited pubsub endpoints on ntfy.sh (supports SSE & JSON history)
 const ORDERS_TOPIC = 'lowkey_cafe_orders_v1';
@@ -65,6 +65,16 @@ class CloudSyncService {
     }
   }
 
+  private parsePayload<T>(raw: any): T | null {
+    if (!raw) return null;
+    if (typeof raw === 'object') return raw as T;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  }
+
   // ==========================================
   // ORDERS MANAGEMENT
   // ==========================================
@@ -99,8 +109,10 @@ class CloudSyncService {
           try {
             const data = JSON.parse(line);
             if (data.event === 'message') {
-              const payload: OrderEvent = JSON.parse(data.message);
-              this.applyOrderEvent(payload);
+              const payload = this.parsePayload<OrderEvent>(data.message);
+              if (payload) {
+                this.applyOrderEvent(payload);
+              }
             }
           } catch (e) {
             // Ignore corrupted lines
@@ -161,7 +173,10 @@ class CloudSyncService {
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
         method: 'POST',
-        headers: { 'Title': `New Order #${newOrder.orderCode}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Title': `New Order #${newOrder.orderCode} (Table ${newOrder.tableNumber})`,
+        },
         body: JSON.stringify(event),
       });
       console.log('✅ Order published to cloud for Kitchen KDS:', newOrder.orderCode);
@@ -239,7 +254,10 @@ class CloudSyncService {
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
         method: 'POST',
-        headers: { 'Title': `Order #${updatedOrder.orderCode} -> ${status}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Title': `Order #${updatedOrder.orderCode} -> ${status}`,
+        },
         body: JSON.stringify(event),
       });
     } catch (err) {
@@ -268,9 +286,11 @@ class CloudSyncService {
             try {
               const data = JSON.parse(e.data);
               if (data.event === 'message') {
-                const payload: OrderEvent = JSON.parse(data.message);
-                this.applyOrderEvent(payload);
-                this.notifyOrderListeners();
+                const payload = this.parsePayload<OrderEvent>(data.message);
+                if (payload) {
+                  this.applyOrderEvent(payload);
+                  this.notifyOrderListeners();
+                }
               }
             } catch (err) {
               console.warn('SSE order parse error', err);
@@ -285,7 +305,7 @@ class CloudSyncService {
       }
     }
 
-    // Safety fallback poll every 8 seconds
+    // Safety fallback poll every 6 seconds
     if (!this.ordersPollTimer) {
       this.ordersPollTimer = setInterval(async () => {
         try {
@@ -294,7 +314,7 @@ class CloudSyncService {
         } catch (e) {
           console.warn('Periodic order poll error', e);
         }
-      }, 8000);
+      }, 6000);
     }
 
     return () => {
@@ -339,11 +359,11 @@ class CloudSyncService {
     const orders = await this.getOrders();
     const order = orders.find((o) => o.id === orderId);
 
-    const subtotal = order ? order.subtotal : 748;
-    const taxAmount = order ? order.taxAmount : 37.4;
+    const subtotal = order ? order.subtotal : 249;
+    const taxAmount = order ? order.taxAmount : 12.45;
     const isTakeaway = order?.tableNumber === 0;
-    const serviceCharge = isTakeaway ? 0 : (order ? order.serviceCharge : 37.4);
-    const finalPayableAmount = order ? order.grandTotal : 822.8;
+    const serviceCharge = isTakeaway ? 0 : (order ? order.serviceCharge : 12.45);
+    const finalPayableAmount = order ? order.grandTotal : 273.9;
 
     const items =
       order && Array.isArray(order.items) && order.items.length > 0
@@ -356,7 +376,6 @@ class CloudSyncService {
           }))
         : [
             { id: 1, itemName: 'Truffle Parmesan Fries', quantity: 1, unitPrice: 249, totalPrice: 249 },
-            { id: 2, itemName: 'Artisan Burrata Margherita', quantity: 1, unitPrice: 499, totalPrice: 499 },
           ];
 
     const bill: Bill = {
@@ -364,7 +383,7 @@ class CloudSyncService {
       billNumber: `BILL-${order ? order.orderCode.replace('ORD-', '') : orderId}`,
       orderId,
       orderCode: order ? order.orderCode : `ORD-${orderId}`,
-      tableNumber: order ? order.tableNumber : 4,
+      tableNumber: order ? order.tableNumber : 10,
       subtotal,
       taxAmount,
       serviceCharge,
@@ -405,13 +424,84 @@ class CloudSyncService {
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
         method: 'POST',
-        headers: { 'Title': `Bill Paid #${paidBill.billNumber}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Title': `Bill Paid #${paidBill.billNumber}`,
+        },
         body: JSON.stringify(event),
       });
     } catch (ignored) {}
 
     console.log('💳 Payment completed and recorded for Bill #', paidBill.billNumber);
     return paidBill;
+  }
+
+  // ==========================================
+  // DYNAMIC TABLES MANAGEMENT
+  // ==========================================
+
+  /**
+   * Derives live table status for all 10 tables based on active orders & waiter calls.
+   */
+  async getTables(): Promise<Table[]> {
+    const orders = await this.getOrders();
+    const requests = await this.getWaiterRequests();
+
+    const activeOrders = orders.filter(
+      (o) => o && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+    );
+
+    return MOCK_TABLES.map((t) => {
+      // Find active order for this table
+      const tableOrder = activeOrders.find((o) => o.tableNumber === t.tableNumber);
+      // Find pending or in-progress waiter call
+      const tableReq = requests.find(
+        (r) => r.tableNumber === t.tableNumber && r.status !== 'RESOLVED'
+      );
+
+      let status = 'AVAILABLE';
+      if (tableReq) {
+        status = 'ASSISTANCE_REQUESTED';
+      } else if (tableOrder) {
+        if (tableOrder.status === 'PREPARING' || tableOrder.status === 'ACCEPTED' || tableOrder.status === 'NEW_ORDER') {
+          status = 'PREPARING';
+        } else if (tableOrder.status === 'READY') {
+          status = 'FOOD_READY';
+        } else if (tableOrder.status === 'SERVED') {
+          status = 'OCCUPIED';
+        } else {
+          status = 'OCCUPIED';
+        }
+      }
+
+      return {
+        ...t,
+        status,
+        activeOrderId: tableOrder?.id,
+        activeOrderCode: tableOrder?.orderCode,
+      };
+    });
+  }
+
+  /**
+   * Clears a table: marks its active order as COMPLETED, resolves its waiter calls, and frees the table.
+   */
+  async clearTable(tableNumber: number): Promise<void> {
+    const orders = await this.getOrders();
+    const tableOrders = orders.filter(
+      (o) => o.tableNumber === tableNumber && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+    );
+    for (const o of tableOrders) {
+      await this.updateOrderStatus(o.id, 'COMPLETED');
+    }
+
+    const requests = await this.getWaiterRequests();
+    const tableReqs = requests.filter(
+      (r) => r.tableNumber === tableNumber && r.status !== 'RESOLVED'
+    );
+    for (const r of tableReqs) {
+      await this.resolveWaiterRequest(r.id);
+    }
   }
 
   // ==========================================
@@ -441,8 +531,10 @@ class CloudSyncService {
           try {
             const data = JSON.parse(line);
             if (data.event === 'message') {
-              const payload: WaiterEvent = JSON.parse(data.message);
-              this.applyWaiterEvent(payload);
+              const payload = this.parsePayload<WaiterEvent>(data.message);
+              if (payload) {
+                this.applyWaiterEvent(payload);
+              }
             }
           } catch (e) {
             // Ignore corrupted lines
@@ -507,7 +599,10 @@ class CloudSyncService {
     try {
       await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
         method: 'POST',
-        headers: { 'Title': `Service Call: Table #${req.tableNumber} (${req.requestType})` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Title': `Table #${req.tableNumber} - ${req.requestType}`,
+        },
         body: JSON.stringify(event),
       });
       console.log('🔔 Waiter call published to cloud for Table #', req.tableNumber);
@@ -546,7 +641,10 @@ class CloudSyncService {
     try {
       await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
         method: 'POST',
-        headers: { 'Title': `Call Accepted for Table` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Title': `Call Accepted for Table`,
+        },
         body: JSON.stringify(event),
       });
     } catch (err) {
@@ -579,7 +677,10 @@ class CloudSyncService {
     try {
       await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
         method: 'POST',
-        headers: { 'Title': `Call Resolved` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Title': `Call Resolved`,
+        },
         body: JSON.stringify(event),
       });
     } catch (err) {
@@ -605,9 +706,11 @@ class CloudSyncService {
             try {
               const data = JSON.parse(e.data);
               if (data.event === 'message') {
-                const payload: WaiterEvent = JSON.parse(data.message);
-                this.applyWaiterEvent(payload);
-                this.notifyWaiterListeners();
+                const payload = this.parsePayload<WaiterEvent>(data.message);
+                if (payload) {
+                  this.applyWaiterEvent(payload);
+                  this.notifyWaiterListeners();
+                }
               }
             } catch (err) {
               console.warn('SSE waiter parse error', err);
@@ -622,7 +725,7 @@ class CloudSyncService {
       }
     }
 
-    // Safety fallback poll every 8 seconds
+    // Safety fallback poll every 6 seconds
     if (!this.waiterPollTimer) {
       this.waiterPollTimer = setInterval(async () => {
         try {
@@ -631,7 +734,7 @@ class CloudSyncService {
         } catch (e) {
           console.warn('Periodic waiter poll error', e);
         }
-      }, 8000);
+      }, 6000);
     }
 
     return () => {

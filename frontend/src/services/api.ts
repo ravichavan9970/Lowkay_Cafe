@@ -173,13 +173,31 @@ export const menuApi = {
 };
 
 export const tableApi = {
-  getTables: () =>
-    safeApiCall(() => api.get<Table[]>('/tables'), MOCK_TABLES),
-  getTable: (tableNum: number) =>
-    safeApiCall(
-      () => api.get<Table>(`/tables/${tableNum}`),
-      MOCK_TABLES.find((t) => t.tableNumber === tableNum) || MOCK_TABLES[0]
-    ),
+  getTables: async (): Promise<{ data: Table[] }> => {
+    try {
+      const res = await api.get<Table[]>('/tables');
+      if (isHtmlResponse(res.data) || !Array.isArray(res.data)) {
+        throw new Error('Invalid tables response');
+      }
+      return res;
+    } catch {
+      const tables = await cloudSync.getTables();
+      return { data: tables };
+    }
+  },
+  getTable: async (tableNum: number): Promise<{ data: Table }> => {
+    try {
+      const res = await api.get<Table>(`/tables/${tableNum}`);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
+        throw new Error('Invalid getTable response');
+      }
+      return res;
+    } catch {
+      const tables = await cloudSync.getTables();
+      const found = tables.find((t) => t.tableNumber === tableNum) || tables[0];
+      return { data: found };
+    }
+  },
   validateToken: (tableNum: number, token: string) =>
     safeApiCall(
       () => api.get<{ valid: boolean; tableNumber: number }>(`/tables/${tableNum}/validate-token?token=${token}`),
@@ -321,24 +339,16 @@ export const kitchenApi = {
 
 export const waiterApi = {
   callWaiter: async (data: { tableNumber: number; requestType: string; additionalNote?: string }) => {
-    try {
-      const res = await api.post<WaiterRequest>('/waiter/call', data);
-      if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
-        throw new Error('Invalid callWaiter response');
-      }
-      return res;
-    } catch {
-      const newReq: WaiterRequest = {
-        id: Date.now(),
-        tableNumber: data.tableNumber,
-        requestType: data.requestType as any,
-        status: 'PENDING',
-        additionalNote: data.additionalNote,
-        requestedAt: new Date().toISOString(),
-      };
-      const saved = await cloudSync.callWaiter(newReq);
-      return { data: saved };
-    }
+    const newReq: WaiterRequest = {
+      id: Date.now(),
+      tableNumber: data.tableNumber,
+      requestType: data.requestType as any,
+      status: 'PENDING',
+      additionalNote: data.additionalNote,
+      requestedAt: new Date().toISOString(),
+    };
+    const saved = await cloudSync.callWaiter(newReq);
+    return { data: saved };
   },
   getRequests: async (): Promise<{ data: WaiterRequest[] }> => {
     try {

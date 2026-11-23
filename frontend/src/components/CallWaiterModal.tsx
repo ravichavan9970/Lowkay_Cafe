@@ -18,6 +18,7 @@ const REQUEST_TYPES: { type: WaiterRequestType; label: string; icon: any }[] = [
 ];
 
 export const CallWaiterModal: React.FC<CallWaiterModalProps> = ({ tableNumber, onClose }) => {
+  const effectiveTable = tableNumber && tableNumber > 0 ? tableNumber : 10;
   const [selectedType, setSelectedType] = useState<WaiterRequestType>('WATER');
   const [note, setNote] = useState('');
   const [isCalling, setIsCalling] = useState(false);
@@ -27,14 +28,14 @@ export const CallWaiterModal: React.FC<CallWaiterModalProps> = ({ tableNumber, o
     setIsCalling(true);
     try {
       await waiterApi.callWaiter({
-        tableNumber,
+        tableNumber: effectiveTable,
         requestType: selectedType,
         additionalNote: note.trim() || undefined,
       });
       setCallSuccess(true);
       setTimeout(() => {
         onClose();
-      }, 2000);
+      }, 1500);
     } catch (err) {
       console.error(err);
       alert('Could not notify staff. Please notify a floor server directly.');
@@ -63,7 +64,7 @@ export const CallWaiterModal: React.FC<CallWaiterModalProps> = ({ tableNumber, o
               Waiter Notified!
             </h3>
             <p className="text-xs text-stone-500">
-              A staff member has received your request for Table #{tableNumber} and is heading over shortly.
+              A staff member has received your request for Table #{effectiveTable} and is heading over shortly.
             </p>
           </div>
         ) : (
@@ -76,7 +77,7 @@ export const CallWaiterModal: React.FC<CallWaiterModalProps> = ({ tableNumber, o
                 <h3 className="font-display font-extrabold text-lg text-stone-900">
                   Call Waiter
                 </h3>
-                <p className="text-xs text-stone-500">Table #{tableNumber} • Real-time server ping</p>
+                <p className="text-xs text-stone-500">Table #{effectiveTable} • Real-time server ping</p>
               </div>
             </div>
 
