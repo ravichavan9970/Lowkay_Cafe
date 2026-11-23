@@ -26,14 +26,19 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { MOCK_TABLES } from '../services/mockData';
-import { Table } from '../types';
+import { MOCK_TABLES, MOCK_FOOD_ITEMS, MOCK_CATEGORIES } from '../services/mockData';
+import { Table, FoodItem, Category } from '../types';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Selected zone filter for table viewer
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
+
+  // Interactive full menu state inside Landing Page
+  const [selectedMenuCategory, setSelectedMenuCategory] = useState<number | 'ALL'>('ALL');
+  const [menuSearchQuery, setMenuSearchQuery] = useState('');
+  const [menuVegOnly, setMenuVegOnly] = useState(false);
   
   // QR Modal state
   const [activeQrModal, setActiveQrModal] = useState<{
@@ -52,6 +57,20 @@ export const LandingPage: React.FC = () => {
   const filteredTables = selectedZone === 'ALL'
     ? MOCK_TABLES
     : MOCK_TABLES.filter((t) => t.floorZone === selectedZone);
+
+  const filteredMenuItems = MOCK_FOOD_ITEMS.filter((item) => {
+    if (selectedMenuCategory !== 'ALL' && item.categoryId !== selectedMenuCategory) {
+      return false;
+    }
+    if (menuVegOnly && !item.isVeg) return false;
+    if (menuSearchQuery.trim()) {
+      const q = menuSearchQuery.toLowerCase();
+      const matchName = item.name.toLowerCase().includes(q);
+      const matchDesc = item.description?.toLowerCase().includes(q);
+      if (!matchName && !matchDesc) return false;
+    }
+    return true;
+  });
 
   const handleCopyWifi = () => {
     navigator.clipboard.writeText('lowkeycoffee');
@@ -96,10 +115,10 @@ export const LandingPage: React.FC = () => {
 
           {/* Quick Header Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-neutral-300">
+            <a href="#menu" className="hover:text-yellow-400 transition-colors">Menu (23+ Items)</a>
             <a href="#dine-in-tables" className="hover:text-yellow-400 transition-colors">Dine-In Tables</a>
             <a href="#takeaway-qr" className="hover:text-yellow-400 transition-colors">Takeaway / To-Go</a>
             <a href="#story" className="hover:text-yellow-400 transition-colors">Our Story</a>
-            <a href="#specials" className="hover:text-yellow-400 transition-colors">Chef Specials</a>
             <a href="#visit" className="hover:text-yellow-400 transition-colors">Hours & Wi-Fi</a>
           </nav>
 
@@ -148,19 +167,27 @@ export const LandingPage: React.FC = () => {
           </p>
 
           {/* Primary Action Buttons */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-md mx-auto">
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-lg mx-auto">
             <a
-              href="#dine-in-tables"
+              href="#menu"
               className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-yellow-400/25 active:scale-95 transition-all"
             >
-              <QrCode className="w-4 h-4 stroke-[2.5]" />
-              <span>Dine-In Table Menu</span>
+              <UtensilsCrossed className="w-4 h-4 stroke-[2.5]" />
+              <span>Browse Full Menu</span>
               <ArrowRight className="w-4 h-4 ml-1 stroke-[2.5]" />
             </a>
 
             <a
+              href="#dine-in-tables"
+              className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
+            >
+              <QrCode className="w-4 h-4 text-yellow-400 stroke-[2.5]" />
+              <span>Dine-In Tables</span>
+            </a>
+
+            <a
               href="#takeaway-qr"
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
+              className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
             >
               <ShoppingBag className="w-4 h-4 text-yellow-400" />
               <span>Takeaway / Outside QR</span>
@@ -447,156 +474,160 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 3: Chef's Signature Menu Showcase */}
-      <section id="specials" className="py-16 sm:py-24 border-b border-neutral-850">
+      {/* SECTION 3: Full Interactive Cafe Menu & Culinary Catalog */}
+      <section id="menu" className="py-16 sm:py-24 border-b border-neutral-850">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="text-center max-w-2xl mx-auto mb-12">
+          <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider mb-2">
-              <Award className="w-3.5 h-3.5" />
-              <span>Chef Signatures</span>
+              <UtensilsCrossed className="w-3.5 h-3.5" />
+              <span>Full Cafe Menu · {MOCK_FOOD_ITEMS.length} Handcrafted Items</span>
             </div>
             <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight">
-              Culinary Artistry in Every Bite
+              Explore Our Culinary Menu
             </h2>
             <p className="text-neutral-400 text-sm mt-2">
-              From dawn espresso pulls to evening sourdough pies, our chefs prepare each recipe from scratch using uncompromised fresh ingredients.
+              Browse artisan wood-fired sourdough pizzas, brioche smash burgers, specialty espresso pulls, and molten Basque cheesecakes.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Search, Dietary Filter & Category Controls */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
             
-            {/* Item 1 */}
-            <div className="group rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/50 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10">
-              <div className="h-48 overflow-hidden relative">
-                <img
-                  src="https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=600&q=80"
-                  alt="Artisan Burrata Margherita"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-yellow-400 text-[10px] font-black border border-neutral-800">
-                  Wood-Fired Pizza
-                </span>
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-black text-base text-white">Artisan Burrata Margherita</h3>
-                  <span className="font-black text-yellow-400 text-sm">₹499</span>
-                </div>
-                <p className="text-neutral-400 text-xs mt-1.5 line-clamp-2">
-                  San Marzano DOP sauce, whole creamy burrata pugliese, cold-pressed basil oil, blistered crust.
-                </p>
-                <button
-                  onClick={() => navigate('/takeaway')}
-                  className="mt-4 w-full py-2 rounded-xl bg-neutral-800 hover:bg-yellow-400 hover:text-black text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                >
-                  <span>Order Now</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+            {/* Search Input */}
+            <div className="relative w-full md:w-80">
+              <input
+                type="text"
+                placeholder="Search dishes, ingredients, or drinks..."
+                value={menuSearchQuery}
+                onChange={(e) => setMenuSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-500 text-xs focus:outline-none focus:border-yellow-400 transition-all"
+              />
+              <span className="absolute left-3.5 top-3 text-neutral-400">🔍</span>
             </div>
 
-            {/* Item 2 */}
-            <div className="group rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/50 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10">
-              <div className="h-48 overflow-hidden relative">
-                <img
-                  src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80"
-                  alt="Classic Double Smash Burger"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-yellow-400 text-[10px] font-black border border-neutral-800">
-                  Gourmet Burger
-                </span>
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-black text-base text-white">Double Smash Cheeseburger</h3>
-                  <span className="font-black text-yellow-400 text-sm">₹449</span>
-                </div>
-                <p className="text-neutral-400 text-xs mt-1.5 line-clamp-2">
-                  Two smashed prime patties, melted Wisconsin cheddar, caramelized onion relish, toasted brioche bun.
-                </p>
-                <button
-                  onClick={() => navigate('/takeaway')}
-                  className="mt-4 w-full py-2 rounded-xl bg-neutral-800 hover:bg-yellow-400 hover:text-black text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                >
-                  <span>Order Now</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {/* Item 3 */}
-            <div className="group rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/50 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10">
-              <div className="h-48 overflow-hidden relative">
-                <img
-                  src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80"
-                  alt="Iced Spanish Vanilla Latte"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-yellow-400 text-[10px] font-black border border-neutral-800">
-                  Specialty Coffee
-                </span>
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-black text-base text-white">Iced Spanish Vanilla Latte</h3>
-                  <span className="font-black text-yellow-400 text-sm">₹239</span>
-                </div>
-                <p className="text-neutral-400 text-xs mt-1.5 line-clamp-2">
-                  Double ristretto of Ethiopian Yirgacheffe, sweetened condensed milk, organic Madagascar vanilla bean.
-                </p>
-                <button
-                  onClick={() => navigate('/takeaway')}
-                  className="mt-4 w-full py-2 rounded-xl bg-neutral-800 hover:bg-yellow-400 hover:text-black text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                >
-                  <span>Order Now</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {/* Item 4 */}
-            <div className="group rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/50 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10">
-              <div className="h-48 overflow-hidden relative">
-                <img
-                  src="https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80"
-                  alt="Lotus Biscoff Basque Cheesecake"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-yellow-400 text-[10px] font-black border border-neutral-800">
-                  House Dessert
-                </span>
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-black text-base text-white">Biscoff Basque Cheesecake</h3>
-                  <span className="font-black text-yellow-400 text-sm">₹329</span>
-                </div>
-                <p className="text-neutral-400 text-xs mt-1.5 line-clamp-2">
-                  Molten San Sebastian Basque cheesecake smothered with warm spiced Lotus Biscoff biscuit spread.
-                </p>
-                <button
-                  onClick={() => navigate('/takeaway')}
-                  className="mt-4 w-full py-2 rounded-xl bg-neutral-800 hover:bg-yellow-400 hover:text-black text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                >
-                  <span>Order Now</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="mt-10 text-center">
+            {/* Veg Only Toggle */}
             <button
-              onClick={() => navigate('/table/1')}
-              className="px-6 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white font-black text-xs inline-flex items-center gap-2 transition-all"
+              onClick={() => setMenuVegOnly(!menuVegOnly)}
+              className={`px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 border transition-all ${
+                menuVegOnly
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
             >
-              <span>Explore All 23+ Menu Items</span>
-              <ChevronRight className="w-4 h-4 text-yellow-400" />
+              <span className={`w-2.5 h-2.5 rounded-full ${menuVegOnly ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-600'}`}></span>
+              <span>100% Pure Veg Dishes</span>
             </button>
           </div>
+
+          {/* Category Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-8">
+            <button
+              onClick={() => setSelectedMenuCategory('ALL')}
+              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
+                selectedMenuCategory === 'ALL'
+                  ? 'bg-yellow-400 text-black shadow-md'
+                  : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white border border-neutral-800'
+              }`}
+            >
+              All Items ({MOCK_FOOD_ITEMS.length})
+            </button>
+            {MOCK_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedMenuCategory(cat.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
+                  selectedMenuCategory === cat.id
+                    ? 'bg-yellow-400 text-black shadow-md'
+                    : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white border border-neutral-800'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Dish Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredMenuItems.map((item) => (
+              <div
+                key={item.id}
+                className="group rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/50 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="h-44 overflow-hidden relative">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className={`w-3.5 h-3.5 rounded-full border-2 ${item.isVeg ? 'border-emerald-500 bg-emerald-500/40' : 'border-rose-500 bg-rose-500/40'} flex items-center justify-center`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[10px] font-bold text-neutral-300 border border-neutral-800">
+                        {item.categoryName}
+                      </span>
+                    </div>
+                    {item.isSpecialOffer && (
+                      <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase shadow-md">
+                        Special Offer
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-display font-black text-sm text-white group-hover:text-yellow-400 transition-colors">
+                        {item.name}
+                      </h3>
+                      <span className="font-black text-yellow-400 text-sm whitespace-nowrap">
+                        ₹{item.price}
+                      </span>
+                    </div>
+                    <p className="text-neutral-400 text-xs mt-1.5 line-clamp-2 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 pt-0">
+                  <div className="pt-3 border-t border-neutral-800/80 flex items-center gap-2">
+                    <button
+                      onClick={() => navigate('/takeaway')}
+                      className="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                    >
+                      <ShoppingBag className="w-3 h-3 text-yellow-400" />
+                      <span>Takeaway</span>
+                    </button>
+                    <a
+                      href="#dine-in-tables"
+                      className="flex-1 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black transition-colors flex items-center justify-center gap-1 shadow-md shadow-yellow-400/10"
+                    >
+                      <QrCode className="w-3 h-3 stroke-[2.5]" />
+                      <span>Dine-In</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {filteredMenuItems.length === 0 && (
+            <div className="text-center py-16 text-neutral-400">
+              <p className="text-sm">No dishes matched your search criteria.</p>
+              <button
+                onClick={() => {
+                  setMenuSearchQuery('');
+                  setMenuVegOnly(false);
+                  setSelectedMenuCategory('ALL');
+                }}
+                className="mt-3 px-4 py-2 rounded-xl bg-neutral-800 text-white text-xs font-bold"
+              >
+                Reset Filters
+              </button>
+            </div>
+          )}
 
         </div>
       </section>

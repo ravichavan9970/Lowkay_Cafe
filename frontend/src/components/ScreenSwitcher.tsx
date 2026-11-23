@@ -19,11 +19,24 @@ export const ScreenSwitcher: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // If user dismissed the floating bar, don't show it
-  if (isDismissed) return null;
-
   // Determine current active mode based on route
   const currentPath = location.pathname;
+
+  // Only show floating switcher on staff routes or for logged-in staff members.
+  // Customers on the landing page, table menu, or takeaway will NEVER see this bar!
+  const isStaffRoute =
+    currentPath.startsWith('/kds') ||
+    currentPath.startsWith('/waiter') ||
+    currentPath.startsWith('/admin') ||
+    currentPath.startsWith('/login');
+
+  const isStaffUser =
+    user && user.roles && user.roles.some((r) => r !== 'ROLE_CUSTOMER');
+
+  if (isDismissed || (!isStaffRoute && !isStaffUser)) {
+    return null;
+  }
+
   let activeTab: 'customer' | 'kitchen' | 'waiter' | 'admin' = 'customer';
   if (currentPath.startsWith('/kds')) {
     activeTab = 'kitchen';

@@ -104,124 +104,57 @@ export const CustomerHome: React.FC = () => {
 
       <Navbar onOpenCart={() => setIsCartOpen(true)} />
 
-      {/* Mode Switcher & Breadcrumb Bar */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-1.5 text-neutral-400 hover:text-yellow-400 font-bold transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Cafe Website</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setTakeawayMode(false);
-              if (tableNumber) {
-                navigate(`/table/${tableNumber}`);
-              } else {
-                navigate('/#dine-in-tables');
-              }
-            }}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-              !isTakeaway
-                ? 'bg-yellow-400 text-black font-black shadow-sm'
-                : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white'
-            }`}
-          >
-            🍽️ Dine-In {tableNumber ? `(Table ${tableNumber})` : ''}
-          </button>
-
-          <button
-            onClick={() => {
-              setTakeawayMode(true);
-              navigate('/takeaway');
-            }}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-              isTakeaway
-                ? 'bg-yellow-400 text-black font-black shadow-sm'
-                : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white'
-            }`}
-          >
-            🥡 Takeaway / Outside Pickup
-          </button>
-        </div>
-      </div>
-
-      {/* Hero Welcome Glass Card */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-2 pb-2">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-neutral-950/90 backdrop-blur-2xl rounded-3xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden text-white border border-neutral-800">
-            
-            {/* Ambient Background Glow inside Glass */}
-            <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-yellow-400/15 blur-3xl pointer-events-none"></div>
-            <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-yellow-500/10 blur-3xl pointer-events-none"></div>
-
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                {/* Yellow Glass Pill Badge */}
-                {isTakeaway ? (
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400 text-black text-xs font-black mb-4 shadow-md">
-                    <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>Takeaway / Outside Pickup · 0% Service Charge</span>
-                  </div>
-                ) : tableNumber ? (
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400/10 backdrop-blur-md border border-yellow-400/30 text-yellow-300 text-xs font-bold mb-4 shadow-sm">
-                    <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                    <span>Smart Digital Dining · Table {tableNumber}</span>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-bold mb-4 shadow-sm">
-                    <QrCode className="w-3.5 h-3.5 text-yellow-400" />
-                    <span>Browsing Digital Menu</span>
-                  </div>
-                )}
-
-                <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight text-white leading-tight">
-                  {isTakeaway ? (
-                    <>
-                      Order To-Go & <span className="text-yellow-400">Curbside Pickup</span>
-                    </>
-                  ) : (
-                    <>
-                      Artisan Coffee & <span className="text-yellow-400">Gourmet Bites</span>
-                    </>
-                  )}
+      {/* Compact Diner Header */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 shadow-md">
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
+              title="Return to Cafe Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display font-black text-lg sm:text-xl text-white">
+                  {isTakeaway ? 'Takeaway & Pickup Menu' : `Table #${tableNumber || 1} Menu`}
                 </h1>
-                
-                <p className="text-neutral-300 text-sm sm:text-base mt-2.5 leading-relaxed font-normal">
-                  {isTakeaway
-                    ? 'Packaged in insulated eco-friendly containers. Zero service fee, ready at the pickup counter with live alerts.'
-                    : 'Order straight to our kitchen, customize spice and portion levels, and track preparation live from your seat.'}
-                </p>
+                <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider">
+                  {isTakeaway ? '🥡 To-Go (0% Fee)' : '🍽️ Dine-In Table'}
+                </span>
               </div>
-
-              {/* High-Contrast Search Capsule */}
-              <div className="w-full md:w-88 shrink-0">
-                <div className="relative group">
-                  <Search className="w-4 h-4 text-neutral-400 absolute left-4 top-3.5 transition-colors group-focus-within:text-yellow-400" />
-                  <input
-                    type="text"
-                    placeholder="Search dishes, drinks, burgers..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-full bg-neutral-900/90 backdrop-blur-2xl border border-neutral-700/80 text-white placeholder:text-neutral-400 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 shadow-inner transition-all"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3.5 top-3 text-neutral-400 hover:text-white text-xs px-2 py-0.5 rounded-full bg-neutral-800"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                {isTakeaway
+                  ? 'Zero dine-in service charge · Freshly packed at counter'
+                  : 'Orders dispatch directly to kitchen line · Live updates'}
+              </p>
             </div>
           </div>
+
+          {/* Inline Search Bar */}
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search dishes, drinks, burgers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-xl bg-black border border-neutral-800 text-white placeholder:text-neutral-500 text-xs focus:outline-none focus:border-yellow-400 transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2 text-neutral-500 hover:text-white text-xs px-1"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
         </div>
-      </section>
+      </div>
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full relative z-10">
