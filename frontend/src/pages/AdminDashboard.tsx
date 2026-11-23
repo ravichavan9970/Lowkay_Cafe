@@ -100,17 +100,19 @@ export const AdminDashboard: React.FC = () => {
   });
 
   const loadData = () => {
-    adminApi.getDashboard().then((res) => setStats(res.data)).catch(console.error);
-    adminApi.getAnalytics().then((res) => setAnalytics(res.data)).catch(console.error);
-    tableApi.getTables().then((res) => setTables(res.data)).catch(console.error);
-    menuApi.getItems().then((res) => setMenuItems(res.data)).catch(console.error);
-    menuApi.getCategories().then((res) => setCategories(res.data)).catch(console.error);
-    adminApi.getAllStaff().then((res) => setStaffList(res.data)).catch(console.error);
-    adminApi.getOrdersHistory().then((res) => setOrdersHistory(res.data)).catch(console.error);
+    adminApi.getDashboard().then((res) => res.data && typeof res.data === 'object' && !Array.isArray(res.data) && setStats(res.data)).catch(console.error);
+    adminApi.getAnalytics().then((res) => res.data && typeof res.data === 'object' && setAnalytics(res.data)).catch(console.error);
+    tableApi.getTables().then((res) => setTables(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    menuApi.getItems().then((res) => setMenuItems(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    menuApi.getCategories().then((res) => setCategories(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    adminApi.getAllStaff().then((res) => setStaffList(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    adminApi.getOrdersHistory().then((res) => setOrdersHistory(Array.isArray(res.data) ? res.data : [])).catch(console.error);
     adminApi.getNetworkInfo().then((res) => {
-      setNetworkInfo(res.data);
-      if (res.data.recommendedBaseUrl) {
-        setCustomQrBaseUrl(res.data.recommendedBaseUrl);
+      if (res.data && typeof res.data === 'object') {
+        setNetworkInfo(res.data);
+        if (res.data.recommendedBaseUrl) {
+          setCustomQrBaseUrl(res.data.recommendedBaseUrl);
+        }
       }
     }).catch(console.error);
   };

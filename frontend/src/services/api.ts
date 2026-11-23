@@ -46,12 +46,24 @@ const DEMO_ACCOUNTS: Record<string, { pass: string; id: number; fullName: string
   customer: { pass: 'customer123', id: 4, fullName: 'Guest Diner', email: 'customer@lowkeycafe.com', roles: ['ROLE_CUSTOMER'] },
 };
 
+function isHtmlResponse(data: any): boolean {
+  if (typeof data === 'string') {
+    const s = data.trim().toLowerCase();
+    return s.startsWith('<!doctype') || s.startsWith('<html') || s.includes('<div id="root">');
+  }
+  return false;
+}
+
 // Safe API helper that executes real backend call, and falls back to mock data if backend is offline/404 on Vercel
 async function safeApiCall<T>(call: () => Promise<{ data: T }>, fallback: T | (() => T)): Promise<{ data: T }> {
   try {
-    return await call();
+    const res = await call();
+    if (isHtmlResponse(res.data)) {
+      throw new Error('API returned HTML text instead of JSON');
+    }
+    return res;
   } catch (err: any) {
-    console.warn('Backend endpoint unavailable or returned error, using fallback demo data:', err.message || err);
+    console.warn('Backend endpoint unavailable or returned error, using fallback demo data:', err?.message || err);
     const data = typeof fallback === 'function' ? (fallback as () => T)() : fallback;
     return { data };
   }
@@ -60,7 +72,11 @@ async function safeApiCall<T>(call: () => Promise<{ data: T }>, fallback: T | ((
 export const authApi = {
   login: async (data: any): Promise<{ data: AuthResponse }> => {
     try {
-      return await api.post<AuthResponse>('/auth/login', data);
+      const res = await api.post<AuthResponse>('/auth/login', data);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.token) {
+        throw new Error('Endpoint returned HTML instead of AuthResponse');
+      }
+      return res;
     } catch (err: any) {
       // Offline / Vercel fallback: Check if credentials match demo accounts
       const uname = (data.username || '').toLowerCase().trim();
@@ -87,10 +103,40 @@ export const authApi = {
     if (token && token.startsWith('demo-jwt-token-')) {
       const saved = localStorage.getItem('lowkey_demo_user');
       if (saved) {
-        return { data: JSON.parse(saved) };
+        try {
+          return { data: JSON.parse(saved) };
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
-    return api.get<AuthResponse>('/auth/me');
+    try {
+      const res = await api.get<AuthResponse>('/auth/me');
+      if (isHtmlResponse(res.data) || !res.data || !res.data.username) {
+        throw new Error('Invalid getMe payload');
+      }
+      return res;
+    } catch {
+      const saved = localStorage.getItem('lowkey_demo_user');
+      if (saved) {
+        try {
+          return { data: JSON.parse(saved) };
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      return {
+        data: {
+          token: 'demo-jwt-token-admin',
+          type: 'Bearer',
+          id: 1,
+          username: 'admin',
+          email: 'admin@lowkeycafe.com',
+          fullName: 'Cafe General Manager',
+          roles: ['ROLE_ADMIN'],
+        },
+      };
+    }
   },
 };
 
@@ -143,7 +189,11 @@ export const tableApi = {
 export const orderApi = {
   createOrder: async (orderData: any): Promise<{ data: Order }> => {
     try {
-      return await api.post<Order>('/orders', orderData);
+      const res = await api.post<Order>('/orders', orderData);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.orderCode) {
+        throw new Error('Invalid createOrder response');
+      }
+      return res;
     } catch {
       // Vercel / offline fallback: generate order and persist in local storage
       const randomCode = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -195,7 +245,11 @@ export const orderApi = {
   },
   trackOrder: async (orderCode: string): Promise<{ data: Order }> => {
     try {
-      return await api.get<Order>(`/orders/${orderCode}`);
+      const res = await api.get<Order>(`/orders/${orderCode}`);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.orderCode) {
+        throw new Error('Invalid trackOrder response');
+      }
+      return res;
     } catch {
       const existing: Order[] = JSON.parse(localStorage.getItem('lowkey_demo_orders') || '[]');
       const found = existing.find((o) => o.orderCode === orderCode) || MOCK_ORDERS.find((o) => o.orderCode === orderCode) || MOCK_ORDERS[0];
@@ -278,7 +332,11 @@ export const waiterApi = {
 export const billingApi = {
   getBillForOrder: async (orderId: number): Promise<{ data: Bill }> => {
     try {
-      return await api.get<Bill>(`/billing/order/${orderId}`);
+      const res = await api.get<Bill>(`/billing/order/${orderId}`);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.items) {
+        throw new Error('Invalid bill response');
+      }
+      return res;
     } catch {
       const mockBill: Bill = {
         id: orderId,

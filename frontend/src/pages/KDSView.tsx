@@ -31,8 +31,8 @@ export const KDSView: React.FC = () => {
 
   // Load stations & active kitchen orders
   const loadData = () => {
-    kitchenApi.getStations().then((res) => setStations(res.data)).catch(console.error);
-    kitchenApi.getOrders().then((res) => setOrders(res.data)).catch(console.error);
+    kitchenApi.getStations().then((res) => setStations(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    kitchenApi.getOrders().then((res) => setOrders(Array.isArray(res.data) ? res.data : [])).catch(console.error);
   };
 
   useEffect(() => {

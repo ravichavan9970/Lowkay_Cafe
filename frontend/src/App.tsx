@@ -8,6 +8,7 @@ import KDSView from './pages/KDSView';
 import WaiterDashboard from './pages/WaiterDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
+import ScreenSwitcher from './components/ScreenSwitcher';
 
 export const App: React.FC = () => {
   return (
@@ -33,6 +34,9 @@ export const App: React.FC = () => {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+
+          {/* Universal iOS Dynamic Island Switcher (Customer / Kitchen / Waiter / Admin) */}
+          <ScreenSwitcher />
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>

@@ -28,8 +28,8 @@ export const WaiterDashboard: React.FC = () => {
 
   // Load floor tables and assistance requests
   const loadFloor = () => {
-    tableApi.getTables().then((res) => setTables(res.data)).catch(console.error);
-    waiterApi.getRequests().then((res) => setRequests(res.data)).catch(console.error);
+    tableApi.getTables().then((res) => setTables(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    waiterApi.getRequests().then((res) => setRequests(Array.isArray(res.data) ? res.data : [])).catch(console.error);
   };
 
   useEffect(() => {
