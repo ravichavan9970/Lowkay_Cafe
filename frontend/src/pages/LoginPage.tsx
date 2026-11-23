@@ -25,6 +25,8 @@ export const LoginPage: React.FC = () => {
         navigate('/kds');
       } else if (username === 'waiter') {
         navigate('/waiter');
+      } else if (username === 'customer') {
+        navigate('/');
       } else {
         navigate('/admin');
       }
@@ -36,6 +38,7 @@ export const LoginPage: React.FC = () => {
   const fillQuickLogin = (u: string, p: string) => {
     setUsername(u);
     setPassword(p);
+    setErrorMsg('');
   };
 
   return (

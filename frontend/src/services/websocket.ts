@@ -12,7 +12,15 @@ class WebSocketService {
       return;
     }
 
-    const socketFactory = () => new SockJS('/ws');
+    const wsUrl = (import.meta as any).env?.VITE_WS_URL;
+    const isVercelWithoutBackend = window.location.hostname.includes('vercel.app') && !wsUrl;
+
+    if (isVercelWithoutBackend) {
+      console.log('Running in Vercel demo preview mode; live WebSocket skipped.');
+      return;
+    }
+
+    const socketFactory = () => new SockJS(wsUrl || '/ws');
 
     this.client = new Client({
       webSocketFactory: socketFactory,

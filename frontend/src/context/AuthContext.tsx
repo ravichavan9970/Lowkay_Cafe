@@ -27,6 +27,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (token) {
+      if (token.startsWith('demo-jwt-token-')) {
+        const saved = localStorage.getItem('lowkey_demo_user');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setUser({
+              id: parsed.id,
+              username: parsed.username,
+              email: parsed.email,
+              fullName: parsed.fullName,
+              roles: parsed.roles as any[],
+            });
+            setIsLoading(false);
+            return;
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+
       authApi.getMe()
         .then((res) => {
           setUser({
@@ -68,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('lowkey_token');
+    localStorage.removeItem('lowkey_demo_user');
     setToken(null);
     setUser(null);
   };

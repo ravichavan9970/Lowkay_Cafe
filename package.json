@@ -1,0 +1,10 @@
+{
+  "name": "lowkey-cafe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Restaurant Management & QR-Based Ordering System",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev"
+  }
+}
