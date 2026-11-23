@@ -118,7 +118,7 @@ export const OrderTracking: React.FC = () => {
         {/* Top Back Navigation & Header */}
         <div className="flex items-center justify-between">
           <Link
-            to={`/?table=${order.tableNumber}`}
+            to={order.tableNumber === 0 ? '/takeaway' : `/table/${order.tableNumber}`}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 hover:text-stone-900"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -126,7 +126,9 @@ export const OrderTracking: React.FC = () => {
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500">Table #{order.tableNumber}</span>
+            <span className="text-xs text-stone-500">
+              {order.tableNumber === 0 ? '🥡 Takeaway / Pickup' : `Table #${order.tableNumber}`}
+            </span>
             <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-stone-200 text-stone-800">
               {order.orderCode}
             </span>

@@ -22,7 +22,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
-  const { itemCount, tableNumber, activeOrderCode } = useCart();
+  const { itemCount, tableNumber, isTakeaway, activeOrderCode } = useCart();
   const { user, logout, hasRole } = useAuth();
   const [showCallWaiter, setShowCallWaiter] = useState(false);
   const [showWifi, setShowWifi] = useState(false);
@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
           
           {/* Brand Logo & iOS Table Pill */}
           <div className="flex items-center gap-3">
-            <Link to={tableNumber ? `/?table=${tableNumber}` : '/'} className="flex items-center gap-2.5 group">
+            <Link to="/" className="flex items-center gap-2.5 group" title="Return to Lowkey Cafe Home">
               <div className="w-10 h-10 rounded-2xl bg-yellow-400 flex items-center justify-center text-black font-black shadow-lg shadow-yellow-400/25 group-hover:scale-105 active:scale-95 transition-all duration-300">
                 <Coffee className="w-5 h-5 text-black stroke-[2.5]" />
               </div>
@@ -49,13 +49,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
               </div>
             </Link>
 
-            {/* iOS Style Table Capsule in Black/Yellow */}
-            {tableNumber && (
+            {/* iOS Style Capsule: Takeaway or Table # */}
+            {isTakeaway ? (
+              <div className="ml-2 px-3 py-1 rounded-full bg-yellow-400 text-black text-xs font-black flex items-center gap-1.5 shadow-md">
+                <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Takeaway</span>
+              </div>
+            ) : tableNumber ? (
               <div className="ml-2 px-3 py-1 rounded-full bg-yellow-400/15 border border-yellow-400/40 text-yellow-300 text-xs font-bold flex items-center gap-1.5 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
                 <span>Table {tableNumber}</span>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Action Buttons with High-Contrast Black, Yellow & White Tone */}
@@ -71,8 +76,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
               <span className="hidden sm:inline">Wi-Fi</span>
             </button>
 
-            {/* Call Waiter Pill in Punchy Yellow */}
-            {tableNumber && (
+            {/* Call Waiter Pill (Only for Dine-in with tableNumber) */}
+            {!isTakeaway && tableNumber && (
               <button
                 onClick={() => setShowCallWaiter(true)}
                 className="px-3.5 py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"

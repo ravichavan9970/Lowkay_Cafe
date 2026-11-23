@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Smartphone,
+  Globe,
+  QrCode,
+  ShoppingBag,
   ChefHat,
   Bell,
   LayoutDashboard,
@@ -19,21 +21,30 @@ export const ScreenSwitcher: React.FC = () => {
 
   // Determine current active mode based on route
   const currentPath = location.pathname;
-  let activeTab: 'customer' | 'kitchen' | 'waiter' | 'admin' = 'customer';
-  if (currentPath.startsWith('/kds')) {
+  let activeTab: 'home' | 'dinein' | 'takeaway' | 'kitchen' | 'waiter' | 'admin' = 'home';
+  if (currentPath === '/') {
+    activeTab = 'home';
+  } else if (currentPath.startsWith('/takeaway')) {
+    activeTab = 'takeaway';
+  } else if (currentPath.startsWith('/table') || currentPath.startsWith('/menu')) {
+    activeTab = 'dinein';
+  } else if (currentPath.startsWith('/kds')) {
     activeTab = 'kitchen';
   } else if (currentPath.startsWith('/waiter')) {
     activeTab = 'waiter';
   } else if (currentPath.startsWith('/admin')) {
     activeTab = 'admin';
-  } else {
-    activeTab = 'customer';
   }
 
-  const handleSwitch = (tab: 'customer' | 'kitchen' | 'waiter' | 'admin') => {
-    if (tab === 'customer') {
-      quickSwitchRole('CUSTOMER');
+  const handleSwitch = (tab: 'home' | 'dinein' | 'takeaway' | 'kitchen' | 'waiter' | 'admin') => {
+    if (tab === 'home') {
       navigate('/');
+    } else if (tab === 'dinein') {
+      quickSwitchRole('CUSTOMER');
+      navigate('/table/4');
+    } else if (tab === 'takeaway') {
+      quickSwitchRole('CUSTOMER');
+      navigate('/takeaway');
     } else if (tab === 'kitchen') {
       quickSwitchRole('KITCHEN_STAFF');
       navigate('/kds');
@@ -48,10 +59,22 @@ export const ScreenSwitcher: React.FC = () => {
 
   const navItems = [
     {
-      id: 'customer' as const,
-      label: 'Diner / Menu',
-      shortLabel: 'Diner',
-      icon: Smartphone,
+      id: 'home' as const,
+      label: 'Cafe Website',
+      shortLabel: 'Home',
+      icon: Globe,
+    },
+    {
+      id: 'dinein' as const,
+      label: 'Table #4',
+      shortLabel: 'Dine-In',
+      icon: QrCode,
+    },
+    {
+      id: 'takeaway' as const,
+      label: 'Takeaway QR',
+      shortLabel: 'To-Go',
+      icon: ShoppingBag,
     },
     {
       id: 'kitchen' as const,

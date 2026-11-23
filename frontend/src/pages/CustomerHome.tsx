@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useParams } from 'react-router-dom';
+import { useSearchParams, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { menuApi, tableApi } from '../services/api';
 import { Category, FoodItem } from '../types';
 import { useCart } from '../context/CartContext';
@@ -8,12 +8,14 @@ import CustomizationModal from '../components/CustomizationModal';
 import CartDrawer from '../components/CartDrawer';
 import { Navbar } from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Search, Sparkles, ShoppingBag, ArrowRight, Coffee, Check } from 'lucide-react';
+import { Search, Sparkles, ShoppingBag, ArrowRight, Coffee, Check, QrCode, ArrowLeft } from 'lucide-react';
 
 export const CustomerHome: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { tableNumber: pathTableNum } = useParams<{ tableNumber?: string }>();
-  const { tableNumber, setTableInfo, itemCount, subtotal } = useCart();
+  const { tableNumber, setTableInfo, isTakeaway, setTakeawayMode, itemCount, subtotal } = useCart();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -25,8 +27,13 @@ export const CustomerHome: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Table recognition from URL query or path
+  // Table & Takeaway recognition from URL
   useEffect(() => {
+    if (location.pathname.startsWith('/takeaway')) {
+      setTakeawayMode(true);
+      return;
+    }
+
     const tableParam = pathTableNum || searchParams.get('table');
     const tokenParam = searchParams.get('token');
 
@@ -39,7 +46,7 @@ export const CustomerHome: React.FC = () => {
         }
       }
     }
-  }, [pathTableNum, searchParams]);
+  }, [pathTableNum, searchParams, location.pathname]);
 
   // Load Categories & Food Items
   useEffect(() => {
@@ -97,8 +104,49 @@ export const CustomerHome: React.FC = () => {
 
       <Navbar onOpenCart={() => setIsCartOpen(true)} />
 
+      {/* Mode Switcher & Breadcrumb Bar */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1.5 text-neutral-400 hover:text-yellow-400 font-bold transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Cafe Website</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setTakeawayMode(false);
+              navigate(tableNumber ? `/table/${tableNumber}` : '/table/4');
+            }}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              !isTakeaway
+                ? 'bg-yellow-400 text-black font-black shadow-sm'
+                : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            🍽️ Dine-In {tableNumber ? `(Table ${tableNumber})` : '(Table #4)'}
+          </button>
+
+          <button
+            onClick={() => {
+              setTakeawayMode(true);
+              navigate('/takeaway');
+            }}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              isTakeaway
+                ? 'bg-yellow-400 text-black font-black shadow-sm'
+                : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            🥡 Takeaway / Outside Pickup
+          </button>
+        </div>
+      </div>
+
       {/* Hero Welcome Glass Card */}
-      <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-6 pb-2">
+      <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-2 pb-2">
         <div className="max-w-7xl mx-auto">
           <div className="bg-neutral-950/90 backdrop-blur-2xl rounded-3xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden text-white border border-neutral-800">
             
@@ -109,17 +157,39 @@ export const CustomerHome: React.FC = () => {
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="max-w-xl">
                 {/* Yellow Glass Pill Badge */}
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400/10 backdrop-blur-md border border-yellow-400/30 text-yellow-300 text-xs font-bold mb-4 shadow-sm">
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>Smart Digital Dining • Table {tableNumber || 4}</span>
-                </div>
+                {isTakeaway ? (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400 text-black text-xs font-black mb-4 shadow-md">
+                    <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Takeaway / Outside Pickup · 0% Service Charge</span>
+                  </div>
+                ) : tableNumber ? (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400/10 backdrop-blur-md border border-yellow-400/30 text-yellow-300 text-xs font-bold mb-4 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>Smart Digital Dining · Table {tableNumber}</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-bold mb-4 shadow-sm">
+                    <QrCode className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>Browsing Digital Menu</span>
+                  </div>
+                )}
 
                 <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight text-white leading-tight">
-                  Artisan Coffee & <span className="text-yellow-400">Gourmet Bites</span>
+                  {isTakeaway ? (
+                    <>
+                      Order To-Go & <span className="text-yellow-400">Curbside Pickup</span>
+                    </>
+                  ) : (
+                    <>
+                      Artisan Coffee & <span className="text-yellow-400">Gourmet Bites</span>
+                    </>
+                  )}
                 </h1>
                 
                 <p className="text-neutral-300 text-sm sm:text-base mt-2.5 leading-relaxed font-normal">
-                  Order straight to our kitchen, customize spice and portion levels, and track preparation live from your seat.
+                  {isTakeaway
+                    ? 'Packaged in insulated eco-friendly containers. Zero service fee, ready at the pickup counter with live alerts.'
+                    : 'Order straight to our kitchen, customize spice and portion levels, and track preparation live from your seat.'}
                 </p>
               </div>
 

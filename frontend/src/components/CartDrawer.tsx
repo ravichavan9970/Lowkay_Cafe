@@ -13,6 +13,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const {
     items,
     tableNumber,
+    isTakeaway,
     updateQuantity,
     removeItem,
     clearCart,
@@ -30,7 +31,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   const navigate = useNavigate();
 
-  const [customerName, setCustomerName] = useState('Guest Diner');
+  const [customerName, setCustomerName] = useState(isTakeaway ? 'Takeaway Customer' : 'Guest Diner');
   const [customerPhone, setCustomerPhone] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   
@@ -103,10 +104,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
     try {
       const payload = {
-        tableNumber: tableNumber || 1,
-        customerName: customerName.trim() || 'Guest Diner',
+        tableNumber: isTakeaway ? 0 : (tableNumber || 1),
+        customerName: customerName.trim() || (isTakeaway ? 'Takeaway Customer' : 'Guest Diner'),
         customerPhone: customerPhone.trim() || undefined,
-        specialInstructions: specialInstructions.trim() || undefined,
+        specialInstructions: isTakeaway
+          ? `[TAKEAWAY / TO-GO PICKUP] ${specialInstructions.trim()}`.trim()
+          : specialInstructions.trim() || undefined,
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
         items: items.map((item) => ({
           foodItemId: item.foodItem.id,
@@ -148,11 +151,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               <h2 className="font-display font-black text-lg text-white">
                 Your Order
               </h2>
-              {tableNumber && (
+              {isTakeaway ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-black text-[11px] font-black">
+                  🥡 Takeaway / To-Go
+                </span>
+              ) : tableNumber ? (
                 <span className="px-2.5 py-0.5 rounded-full bg-yellow-400/15 text-yellow-300 border border-yellow-400/40 text-[11px] font-bold">
                   Table {tableNumber}
                 </span>
-              )}
+              ) : null}
             </div>
             <button
               onClick={onClose}
@@ -375,9 +382,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   <span>Taxes (5% GST)</span>
                   <span>₹{taxAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>Service Charge (5%)</span>
-                  <span>₹{serviceCharge.toFixed(2)}</span>
+                  {isTakeaway ? (
+                    <span className="text-emerald-400 font-bold text-[11px]">₹0.00 (Waived for Takeaway)</span>
+                  ) : (
+                    <span>₹{serviceCharge.toFixed(2)}</span>
+                  )}
                 </div>
                 <div className="flex justify-between text-sm font-extrabold text-white pt-2 border-t border-neutral-800">
                   <span>Total Amount</span>

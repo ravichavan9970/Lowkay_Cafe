@@ -252,7 +252,7 @@ export const KDSView: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-display font-black text-2xl text-white">
-                          TBL #{order.tableNumber}
+                          {order.tableNumber === 0 ? '🥡 TAKEAWAY' : `TBL #${order.tableNumber}`}
                         </span>
                         <span className="text-[11px] font-mono text-stone-400">
                           {order.orderCode}

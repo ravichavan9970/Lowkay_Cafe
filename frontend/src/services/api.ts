@@ -202,14 +202,15 @@ export const orderApi = {
         return acc + food.price * (item.quantity || 1);
       }, 0);
       const taxAmount = Math.round(subtotal * 0.05 * 100) / 100;
-      const serviceCharge = Math.round(subtotal * 0.05 * 100) / 100;
+      const isTakeawayOrder = orderData.tableNumber === 0;
+      const serviceCharge = isTakeawayOrder ? 0 : Math.round(subtotal * 0.05 * 100) / 100;
       const grandTotal = subtotal + taxAmount + serviceCharge;
 
       const newOrder: Order = {
         id: Date.now(),
         orderCode: randomCode,
-        tableNumber: orderData.tableNumber || 4,
-        customerName: orderData.customerName || 'Guest Diner',
+        tableNumber: orderData.tableNumber !== undefined ? orderData.tableNumber : 4,
+        customerName: orderData.customerName || (isTakeawayOrder ? 'Takeaway Customer' : 'Guest Diner'),
         customerPhone: orderData.customerPhone || '+91 98765 43210',
         status: 'NEW_ORDER',
         subtotal,

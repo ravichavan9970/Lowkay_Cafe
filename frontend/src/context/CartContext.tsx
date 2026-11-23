@@ -5,7 +5,9 @@ interface CartContextType {
   items: CartItem[];
   tableNumber: number | null;
   tableToken: string | null;
-  setTableInfo: (tableNum: number, token?: string) => void;
+  isTakeaway: boolean;
+  setTableInfo: (tableNum: number | null, token?: string) => void;
+  setTakeawayMode: (enabled?: boolean) => void;
   addItem: (
     foodItem: FoodItem,
     portion: string,
@@ -44,9 +46,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const [isTakeaway, setIsTakeaway] = useState<boolean>(() => {
+    return localStorage.getItem('lowkey_is_takeaway') === 'true';
+  });
+
   const [tableNumber, setTableNumber] = useState<number | null>(() => {
+    const isTakeawayMode = localStorage.getItem('lowkey_is_takeaway') === 'true';
+    if (isTakeawayMode) return null;
     const saved = localStorage.getItem('lowkey_table');
-    return saved ? parseInt(saved, 10) : 5; // default table 5 if not in url
+    return saved ? parseInt(saved, 10) : null;
   });
 
   const [tableToken, setTableToken] = useState<string | null>(() => {
@@ -71,12 +79,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [activeOrderCode]);
 
-  const setTableInfo = (num: number, token?: string) => {
+  const setTableInfo = (num: number | null, token?: string) => {
     setTableNumber(num);
-    localStorage.setItem('lowkey_table', num.toString());
+    if (num !== null) {
+      localStorage.setItem('lowkey_table', num.toString());
+      setIsTakeaway(false);
+      localStorage.removeItem('lowkey_is_takeaway');
+    } else {
+      localStorage.removeItem('lowkey_table');
+    }
     if (token) {
       setTableToken(token);
       localStorage.setItem('lowkey_table_token', token);
+    } else {
+      setTableToken(null);
+      localStorage.removeItem('lowkey_table_token');
+    }
+  };
+
+  const setTakeawayMode = (enabled = true) => {
+    setIsTakeaway(enabled);
+    if (enabled) {
+      localStorage.setItem('lowkey_is_takeaway', 'true');
+      setTableNumber(null);
+      setTableToken(null);
+      localStorage.removeItem('lowkey_table');
+      localStorage.removeItem('lowkey_table_token');
+    } else {
+      localStorage.removeItem('lowkey_is_takeaway');
     }
   };
 
@@ -165,7 +195,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const taxable = Math.max(0, subtotal - discountAmount);
   const taxAmount = Math.round(taxable * 0.05 * 100) / 100;
-  const serviceCharge = Math.round(taxable * 0.05 * 100) / 100;
+  // No dine-in service charge for takeaway / outside orders!
+  const serviceCharge = isTakeaway ? 0 : Math.round(taxable * 0.05 * 100) / 100;
   const grandTotal = Math.round((taxable + taxAmount + serviceCharge) * 100) / 100;
 
   return (
@@ -174,7 +205,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         items,
         tableNumber,
         tableToken,
+        isTakeaway,
         setTableInfo,
+        setTakeawayMode,
         addItem,
         updateQuantity,
         removeItem,

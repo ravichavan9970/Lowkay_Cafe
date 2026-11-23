@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import LandingPage from './pages/LandingPage';
 import CustomerHome from './pages/CustomerHome';
 import OrderTracking from './pages/OrderTracking';
 import KDSView from './pages/KDSView';
@@ -16,9 +17,13 @@ export const App: React.FC = () => {
       <CartProvider>
         <BrowserRouter>
           <Routes>
-            {/* Customer Website Routes */}
-            <Route path="/" element={<CustomerHome />} />
+            {/* Cafe Landing & Story Website */}
+            <Route path="/" element={<LandingPage />} />
+
+            {/* Customer Digital Menu & Ordering */}
+            <Route path="/menu" element={<CustomerHome />} />
             <Route path="/table/:tableNumber" element={<CustomerHome />} />
+            <Route path="/takeaway" element={<CustomerHome />} />
             <Route path="/order-tracking/:orderCode" element={<OrderTracking />} />
 
             {/* Staff & Kitchen Interfaces */}
