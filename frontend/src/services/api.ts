@@ -284,9 +284,65 @@ export const kitchenApi = {
     safeApiCall(() => api.get<Order[]>(`/kitchen/orders/station/${stationId}`), MOCK_ORDERS),
   updateOrderStatus: async (orderId: number, status: string, reason?: string) => {
     try {
-      return await api.patch<Order>(`/kitchen/orders/${orderId}/status`, { status, reason });
+      const res = await api.patch<Order>(`/kitchen/orders/${orderId}/status`, { status, reason });
+      if (isHtmlResponse(res.data) || !res.data || !Array.isArray(res.data.items)) {
+        throw new Error('Invalid updateOrderStatus response');
+      }
+      return res;
     } catch {
-      return { data: { id: orderId, status } as any };
+      // Find the order in localStorage or MOCK_ORDERS, update its status, and return full order
+      const savedOrders: Order[] = JSON.parse(localStorage.getItem('lowkey_demo_orders') || '[]');
+      const allOrders = [...savedOrders, ...MOCK_ORDERS];
+      const existing = allOrders.find((o) => o.id === orderId);
+
+      const updatedOrder: Order = existing
+        ? { ...existing, status: status as any }
+        : {
+            id: orderId,
+            orderCode: `ORD-${orderId}`,
+            tableNumber: 4,
+            customerName: 'Aarav Sharma',
+            customerPhone: '+91 98765 43210',
+            status: status as any,
+            subtotal: 748,
+            taxAmount: 37.4,
+            serviceCharge: 37.4,
+            discountAmount: 0,
+            grandTotal: 822.8,
+            estimatedPrepMinutes: 12,
+            createdAt: new Date().toISOString(),
+            items: [
+              {
+                id: 1,
+                foodItemId: 1,
+                foodItemName: 'Truffle Parmesan Fries',
+                foodItemImage: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80',
+                categoryName: 'Starters',
+                quantity: 1,
+                unitPrice: 249,
+                subtotal: 249,
+                selectedPortion: 'Full',
+                selectedSpiceLevel: 'MILD',
+                status: status as any,
+                stationId: 1,
+                customizations: [],
+              },
+            ],
+          };
+
+      if (!Array.isArray(updatedOrder.items)) {
+        updatedOrder.items = [];
+      }
+
+      // Persist in localStorage
+      const filtered = savedOrders.filter((o) => o.id !== orderId);
+      if (status !== 'SERVED' && status !== 'COMPLETED' && status !== 'CANCELLED') {
+        localStorage.setItem('lowkey_demo_orders', JSON.stringify([updatedOrder, ...filtered]));
+      } else {
+        localStorage.setItem('lowkey_demo_orders', JSON.stringify(filtered));
+      }
+
+      return { data: updatedOrder };
     }
   },
 };

@@ -34,7 +34,7 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({ item, on
           { optionId, groupName, optionName, additionalPrice: addPrice },
         ];
       } else {
-        const exists = prev.some((c) => c.optionId === optionId);
+        const exists = Array.isArray(prev) ? prev.some((c) => c.optionId === optionId) : false;
         if (exists) {
           return prev.filter((c) => c.optionId !== optionId);
         } else {
@@ -141,8 +141,10 @@ export const CustomizationModal: React.FC<CustomizationModalProps> = ({ item, on
                 </div>
 
                 <div className="space-y-2">
-                  {group.options.map((opt) => {
-                    const isSelected = selectedCustomizations.some((c) => c.optionId === opt.id);
+                  {(group.options || []).map((opt) => {
+                    const isSelected = Array.isArray(selectedCustomizations)
+                      ? selectedCustomizations.some((c) => c.optionId === opt.id)
+                      : false;
                     return (
                       <button
                         key={opt.id}

@@ -83,17 +83,37 @@ export const KDSView: React.FC = () => {
         if (nextStatus === 'SERVED' || nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') {
           return prev.filter((o) => o.id !== orderId);
         }
-        return prev.map((o) => (o.id === orderId ? updated : o));
+        return prev.map((o) => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              ...updated,
+              status: nextStatus,
+              items: Array.isArray(updated?.items) && updated.items.length > 0 ? updated.items : (Array.isArray(o.items) ? o.items : []),
+            };
+          }
+          return o;
+        });
       });
     } catch (err) {
       console.error('Failed to update status', err);
+      // Fallback: update status locally so UI is never stuck
+      setOrders((prev) => {
+        if (nextStatus === 'SERVED' || nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') {
+          return prev.filter((o) => o.id !== orderId);
+        }
+        return prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o));
+      });
     }
   };
 
-  // Filter orders by station
-  const filteredOrders = orders.filter((o) => {
+  // Filter orders by station safely
+  const safeOrdersList = Array.isArray(orders) ? orders : [];
+  const filteredOrders = safeOrdersList.filter((o) => {
+    if (!o) return false;
     if (!selectedStation) return true;
-    return o.items.some((item) => item.stationId === selectedStation);
+    const items = Array.isArray(o.items) ? o.items : [];
+    return items.some((item) => item?.stationId === selectedStation);
   });
 
   // Calculate elapsed time in minutes
@@ -144,9 +164,11 @@ export const KDSView: React.FC = () => {
             All Stations ({orders.length})
           </button>
           {stations.map((st) => {
-            const count = orders.filter((o) =>
-              o.items.some((i) => i.stationId === st.id)
-            ).length;
+            const count = safeOrdersList.filter((o) => {
+              if (!o) return false;
+              const items = Array.isArray(o.items) ? o.items : [];
+              return items.some((i) => i?.stationId === st.id);
+            }).length;
             return (
               <button
                 key={st.id}
@@ -256,7 +278,7 @@ export const KDSView: React.FC = () => {
 
                   {/* Food Items List */}
                   <div className="p-4 flex-1 space-y-3 divide-y divide-stone-800/80 overflow-y-auto max-h-72">
-                    {order.items.map((item) => (
+                    {(Array.isArray(order?.items) ? order.items : []).map((item) => (
                       <div key={item.id} className="pt-2 first:pt-0">
                         <div className="flex items-start justify-between gap-2">
                           <span className="font-display font-bold text-sm text-stone-100 leading-snug">
@@ -275,7 +297,7 @@ export const KDSView: React.FC = () => {
                             </span>
                           )}
 
-                          {item.customizations && item.customizations.map((c, cIdx) => (
+                          {Array.isArray(item.customizations) && item.customizations.map((c, cIdx) => (
                             <span
                               key={cIdx}
                               className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/50"

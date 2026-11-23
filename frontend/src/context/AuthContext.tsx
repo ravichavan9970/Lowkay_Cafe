@@ -143,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasRole = (role: string): boolean => {
-    if (!user) return false;
+    if (!user || !Array.isArray(user.roles)) return false;
     return user.roles.some((r) => r === role || r === `ROLE_${role}`);
   };
 
