@@ -8,7 +8,7 @@ import CustomizationModal from '../components/CustomizationModal';
 import CartDrawer from '../components/CartDrawer';
 import { Navbar } from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Search, Sparkles, ShoppingBag, ArrowRight, Flame, Coffee, Check } from 'lucide-react';
+import { Search, Sparkles, ShoppingBag, ArrowRight, Coffee, Check } from 'lucide-react';
 
 export const CustomerHome: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -87,12 +87,12 @@ export const CustomerHome: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8f7f5] text-stone-900 relative selection:bg-amber-500 selection:text-stone-950 pb-24">
-      {/* Ambient iOS Luminous Glow Mesh */}
+    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white relative selection:bg-yellow-400 selection:text-black pb-28">
+      {/* Ambient Yellow Luminous Glow Mesh */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-amber-400/10 blur-3xl"></div>
-        <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full bg-orange-400/10 blur-3xl"></div>
-        <div className="absolute bottom-10 left-1/3 w-80 h-80 rounded-full bg-amber-500/5 blur-3xl"></div>
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-yellow-400/10 blur-3xl"></div>
+        <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full bg-yellow-500/8 blur-3xl"></div>
+        <div className="absolute bottom-20 left-1/3 w-80 h-80 rounded-full bg-yellow-400/5 blur-3xl"></div>
       </div>
 
       <Navbar onOpenCart={() => setIsCartOpen(true)} />
@@ -100,44 +100,44 @@ export const CustomerHome: React.FC = () => {
       {/* Hero Welcome Glass Card */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-6 pb-2">
         <div className="max-w-7xl mx-auto">
-          <div className="ios-glass-dark rounded-3xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden text-white border border-white/15">
+          <div className="bg-neutral-950/90 backdrop-blur-2xl rounded-3xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] relative overflow-hidden text-white border border-neutral-800">
             
             {/* Ambient Background Glow inside Glass */}
-            <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-amber-500/20 blur-3xl pointer-events-none"></div>
-            <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-orange-600/15 blur-3xl pointer-events-none"></div>
+            <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-yellow-400/15 blur-3xl pointer-events-none"></div>
+            <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-yellow-500/10 blur-3xl pointer-events-none"></div>
 
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="max-w-xl">
-                {/* iOS Glass Pill Badge */}
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-amber-300 text-xs font-bold mb-4 shadow-sm">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Interactive Smart Menu • Table {tableNumber || 4}</span>
+                {/* Yellow Glass Pill Badge */}
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400/10 backdrop-blur-md border border-yellow-400/30 text-yellow-300 text-xs font-bold mb-4 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Smart Digital Dining • Table {tableNumber || 4}</span>
                 </div>
 
                 <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight text-white leading-tight">
-                  Artisan Coffee & <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200">Gourmet Bites</span>
+                  Artisan Coffee & <span className="text-yellow-400">Gourmet Bites</span>
                 </h1>
                 
-                <p className="text-stone-300 text-sm sm:text-base mt-2.5 leading-relaxed font-normal">
+                <p className="text-neutral-300 text-sm sm:text-base mt-2.5 leading-relaxed font-normal">
                   Order straight to our kitchen, customize spice and portion levels, and track preparation live from your seat.
                 </p>
               </div>
 
-              {/* iOS Frosted Search Capsule */}
+              {/* High-Contrast Search Capsule */}
               <div className="w-full md:w-88 shrink-0">
                 <div className="relative group">
-                  <Search className="w-4 h-4 text-stone-400 absolute left-4 top-3.5 transition-colors group-focus-within:text-amber-400" />
+                  <Search className="w-4 h-4 text-neutral-400 absolute left-4 top-3.5 transition-colors group-focus-within:text-yellow-400" />
                   <input
                     type="text"
                     placeholder="Search dishes, drinks, burgers..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 text-white placeholder:text-stone-400 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400/60 shadow-inner transition-all"
+                    className="w-full pl-11 pr-4 py-3 rounded-full bg-neutral-900/90 backdrop-blur-2xl border border-neutral-700/80 text-white placeholder:text-neutral-400 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 shadow-inner transition-all"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3.5 top-3 text-stone-400 hover:text-white text-xs px-1.5 py-0.5 rounded-full bg-white/10"
+                      className="absolute right-3.5 top-3 text-neutral-400 hover:text-white text-xs px-2 py-0.5 rounded-full bg-neutral-800"
                     >
                       ✕
                     </button>
@@ -152,11 +152,11 @@ export const CustomerHome: React.FC = () => {
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full relative z-10">
         
-        {/* iOS Glass Category Navigation Bar */}
-        <div className="sticky top-16 z-30 ios-glass py-3.5 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 mb-6 border-y border-stone-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)]">
+        {/* Sticky Black/Yellow Category Navigation Bar */}
+        <div className="sticky top-16 z-30 bg-[#0a0a0a]/90 backdrop-blur-2xl py-3.5 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 mb-6 border-y border-neutral-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
           <div className="flex items-center justify-between gap-3">
             
-            {/* Scrollable iOS Category Pills */}
+            {/* Scrollable Category Pills in Black/Yellow/White */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
               {safeCategories.map((cat) => {
                 const isSelected = selectedCategory === cat.id;
@@ -164,10 +164,10 @@ export const CustomerHome: React.FC = () => {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-300 flex items-center gap-2 active:scale-95 select-none ${
+                    className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-black whitespace-nowrap transition-all duration-300 flex items-center gap-2 active:scale-95 select-none ${
                       isSelected
-                        ? 'bg-stone-900 text-white shadow-md shadow-stone-900/25 scale-[1.02]'
-                        : 'bg-white/80 hover:bg-white text-stone-600 hover:text-stone-950 border border-stone-200/80 hover:border-stone-300'
+                        ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/25 scale-[1.02]'
+                        : 'bg-neutral-900/90 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 hover:border-neutral-700'
                     }`}
                   >
                     <span>{cat.name}</span>
@@ -176,18 +176,18 @@ export const CustomerHome: React.FC = () => {
               })}
             </div>
 
-            {/* iOS Veg Only Segmented Pill */}
+            {/* Veg Only Toggle Pill */}
             <button
               onClick={() => setVegOnly(!vegOnly)}
-              className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-bold border flex items-center gap-2 transition-all duration-300 active:scale-95 shadow-sm ${
+              className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-black border flex items-center gap-2 transition-all duration-300 active:scale-95 shadow-sm ${
                 vegOnly
-                  ? 'border-emerald-600 bg-emerald-600 text-white shadow-emerald-600/25'
-                  : 'border-stone-200/90 bg-white/80 text-stone-600 hover:text-stone-900'
+                  ? 'border-emerald-500 bg-emerald-500 text-black shadow-emerald-500/25'
+                  : 'border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white'
               }`}
             >
               <span
                 className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                  vegOnly ? 'bg-white text-emerald-600' : 'bg-emerald-600'
+                  vegOnly ? 'bg-black text-emerald-400' : 'bg-emerald-500'
                 }`}
               >
                 {vegOnly && <Check className="w-2 h-2 stroke-[3]" />}
@@ -197,30 +197,30 @@ export const CustomerHome: React.FC = () => {
           </div>
         </div>
 
-        {/* Food Items Grid with iOS Cards */}
+        {/* Food Items Grid with High-Contrast Cards */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
               <div
                 key={n}
-                className="ios-card rounded-3xl h-80 animate-pulse bg-white/70 border border-stone-200/60"
+                className="rounded-3xl h-80 animate-pulse bg-neutral-900/80 border border-neutral-800"
               ></div>
             ))}
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="py-24 text-center ios-card rounded-3xl p-12 max-w-md mx-auto">
-            <Coffee className="w-10 h-10 text-stone-400 mx-auto mb-3" />
-            <h3 className="font-display font-black text-lg text-stone-800">No dishes match your filter</h3>
-            <p className="text-xs text-stone-400 mt-1">Try resetting the veg filter or searching for another keyword.</p>
+          <div className="py-24 text-center bg-neutral-950/80 border border-neutral-800 rounded-3xl p-12 max-w-md mx-auto">
+            <Coffee className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
+            <h3 className="font-display font-black text-lg text-white">No dishes match your filter</h3>
+            <p className="text-xs text-neutral-400 mt-1">Try resetting the filter or searching for another keyword.</p>
             <button
               onClick={() => {
                 setSearchQuery('');
                 setVegOnly(false);
                 if (safeCategories.length > 0) setSelectedCategory(safeCategories[0].id);
               }}
-              className="mt-4 px-4 py-2 rounded-full bg-stone-900 text-white text-xs font-bold hover:bg-amber-500 hover:text-stone-950 transition-colors"
+              className="mt-4 px-5 py-2 rounded-full bg-yellow-400 text-black text-xs font-black hover:bg-yellow-300 transition-colors"
             >
-              Show All Menu
+              Show All Dishes
             </button>
           </div>
         ) : (
@@ -236,30 +236,30 @@ export const CustomerHome: React.FC = () => {
         )}
       </main>
 
-      {/* Floating Bottom iOS Cart Capsule (Appears above the Screen Switcher) */}
+      {/* Floating Bottom Cart Capsule in Black/Yellow Tone */}
       {itemCount > 0 && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 max-w-md w-full px-4 animate-in slide-in-from-bottom duration-300">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="w-full ios-glass-dark text-white p-3 sm:p-3.5 rounded-full shadow-[0_16px_40px_rgba(0,0,0,0.45)] border border-white/20 flex items-center justify-between active:scale-98 transition-all hover:border-amber-400/50 group"
+            className="w-full bg-black/90 backdrop-blur-2xl text-white p-3 sm:p-3.5 rounded-full shadow-[0_16px_40px_rgba(0,0,0,0.8)] border border-yellow-400/40 flex items-center justify-between active:scale-98 transition-all hover:border-yellow-400 group"
           >
             <div className="flex items-center gap-3 pl-1">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 text-stone-950 font-black flex items-center justify-center shadow-md">
-                <ShoppingBag className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-full bg-yellow-400 text-black font-black flex items-center justify-center shadow-md shadow-yellow-400/30">
+                <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
               </div>
               <div className="text-left">
-                <span className="text-[11px] font-semibold text-stone-300 block">
+                <span className="text-[11px] font-semibold text-neutral-300 block">
                   {itemCount} {itemCount === 1 ? 'item' : 'items'} in order
                 </span>
-                <span className="font-display font-black text-sm text-amber-400">
+                <span className="font-display font-black text-sm text-yellow-400">
                   ₹{subtotal.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500 group-hover:bg-amber-400 text-stone-950 text-xs font-black shadow-md transition-colors">
+            <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-yellow-400 group-hover:bg-yellow-300 text-black text-xs font-black shadow-md shadow-yellow-400/20 transition-colors">
               <span>Checkout</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5] group-hover:translate-x-0.5 transition-transform" />
             </div>
           </button>
         </div>
