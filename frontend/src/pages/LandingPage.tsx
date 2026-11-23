@@ -301,12 +301,12 @@ export const LandingPage: React.FC = () => {
                 Each dining table has an individual physical brass QR stand. Scanning directly takes you to your table's dedicated cart with instant kitchen dispatch.
               </p>
             </div>
-            <button
-              onClick={() => navigate('/table/4')}
+            <a
+              href="#dine-in-tables"
               className="shrink-0 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-white transition-colors"
             >
-              Demo Dine-In (Table 4) →
-            </button>
+              Choose Your Table Above ↑
+            </a>
           </div>
         </div>
       </section>

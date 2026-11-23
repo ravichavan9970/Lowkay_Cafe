@@ -118,7 +118,11 @@ export const CustomerHome: React.FC = () => {
           <button
             onClick={() => {
               setTakeawayMode(false);
-              navigate(tableNumber ? `/table/${tableNumber}` : '/table/4');
+              if (tableNumber) {
+                navigate(`/table/${tableNumber}`);
+              } else {
+                navigate('/#dine-in-tables');
+              }
             }}
             className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
               !isTakeaway
@@ -126,7 +130,7 @@ export const CustomerHome: React.FC = () => {
                 : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white'
             }`}
           >
-            🍽️ Dine-In {tableNumber ? `(Table ${tableNumber})` : '(Table #4)'}
+            🍽️ Dine-In {tableNumber ? `(Table ${tableNumber})` : ''}
           </button>
 
           <button

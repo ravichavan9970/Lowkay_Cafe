@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Globe,
-  QrCode,
-  ShoppingBag,
+  Coffee,
   ChefHat,
   Bell,
   LayoutDashboard,
   Sparkles,
   ChevronUp,
   ChevronDown,
+  X,
 } from 'lucide-react';
 
 export const ScreenSwitcher: React.FC = () => {
@@ -18,33 +17,28 @@ export const ScreenSwitcher: React.FC = () => {
   const navigate = useNavigate();
   const { user, quickSwitchRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  // If user dismissed the floating bar, don't show it
+  if (isDismissed) return null;
 
   // Determine current active mode based on route
   const currentPath = location.pathname;
-  let activeTab: 'home' | 'dinein' | 'takeaway' | 'kitchen' | 'waiter' | 'admin' = 'home';
-  if (currentPath === '/') {
-    activeTab = 'home';
-  } else if (currentPath.startsWith('/takeaway')) {
-    activeTab = 'takeaway';
-  } else if (currentPath.startsWith('/table') || currentPath.startsWith('/menu')) {
-    activeTab = 'dinein';
-  } else if (currentPath.startsWith('/kds')) {
+  let activeTab: 'customer' | 'kitchen' | 'waiter' | 'admin' = 'customer';
+  if (currentPath.startsWith('/kds')) {
     activeTab = 'kitchen';
   } else if (currentPath.startsWith('/waiter')) {
     activeTab = 'waiter';
   } else if (currentPath.startsWith('/admin')) {
     activeTab = 'admin';
+  } else {
+    activeTab = 'customer';
   }
 
-  const handleSwitch = (tab: 'home' | 'dinein' | 'takeaway' | 'kitchen' | 'waiter' | 'admin') => {
-    if (tab === 'home') {
+  const handleSwitch = (tab: 'customer' | 'kitchen' | 'waiter' | 'admin') => {
+    if (tab === 'customer') {
+      quickSwitchRole('CUSTOMER');
       navigate('/');
-    } else if (tab === 'dinein') {
-      quickSwitchRole('CUSTOMER');
-      navigate('/table/4');
-    } else if (tab === 'takeaway') {
-      quickSwitchRole('CUSTOMER');
-      navigate('/takeaway');
     } else if (tab === 'kitchen') {
       quickSwitchRole('KITCHEN_STAFF');
       navigate('/kds');
@@ -59,22 +53,10 @@ export const ScreenSwitcher: React.FC = () => {
 
   const navItems = [
     {
-      id: 'home' as const,
-      label: 'Cafe Website',
-      shortLabel: 'Home',
-      icon: Globe,
-    },
-    {
-      id: 'dinein' as const,
-      label: 'Table #4',
-      shortLabel: 'Dine-In',
-      icon: QrCode,
-    },
-    {
-      id: 'takeaway' as const,
-      label: 'Takeaway QR',
-      shortLabel: 'To-Go',
-      icon: ShoppingBag,
+      id: 'customer' as const,
+      label: 'Diner / Website',
+      shortLabel: 'Diner',
+      icon: Coffee,
     },
     {
       id: 'kitchen' as const,
@@ -122,7 +104,7 @@ export const ScreenSwitcher: React.FC = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-400"></span>
             </span>
-            <span className="font-bold text-neutral-200">Live Role</span>
+            <span className="font-bold text-neutral-200">Switch Role</span>
           </div>
 
           {/* Navigation Segments */}
@@ -161,11 +143,21 @@ export const ScreenSwitcher: React.FC = () => {
           {/* Collapse Toggle Button */}
           <button
             onClick={() => setIsCollapsed(true)}
-            className="p-2 ml-1 rounded-full text-neutral-400 hover:text-yellow-400 hover:bg-neutral-800 transition-colors"
+            className="p-2 ml-0.5 rounded-full text-neutral-400 hover:text-yellow-400 hover:bg-neutral-800 transition-colors"
             title="Minimize Switcher"
             aria-label="Minimize Switcher"
           >
             <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Close / Dismiss Button */}
+          <button
+            onClick={() => setIsDismissed(true)}
+            className="p-2 mr-1 rounded-full text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors"
+            title="Dismiss Bar"
+            aria-label="Dismiss Bar"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
