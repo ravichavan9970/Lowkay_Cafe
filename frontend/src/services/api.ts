@@ -350,8 +350,23 @@ export const kitchenApi = {
 export const waiterApi = {
   callWaiter: async (data: { tableNumber: number; requestType: string; additionalNote?: string }) => {
     try {
-      return await api.post<WaiterRequest>('/waiter/call', data);
+      const res = await api.post<WaiterRequest>('/waiter/call', data);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
+        throw new Error('Invalid callWaiter response');
+      }
+      return res;
     } catch {
+      const raw = localStorage.getItem('lowkey_demo_waiter_requests');
+      const list: WaiterRequest[] = raw ? JSON.parse(raw) : [...MOCK_WAITER_REQUESTS];
+
+      // Prevent duplicate pending requests for the same table and request type
+      const activeExisting = list.find(
+        (r) => r.tableNumber === data.tableNumber && r.requestType === data.requestType && r.status !== 'RESOLVED'
+      );
+      if (activeExisting) {
+        return { data: activeExisting };
+      }
+
       const newReq: WaiterRequest = {
         id: Date.now(),
         tableNumber: data.tableNumber,
@@ -360,22 +375,87 @@ export const waiterApi = {
         additionalNote: data.additionalNote,
         requestedAt: new Date().toISOString(),
       };
+
+      const nextList = [newReq, ...list];
+      localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(nextList));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
+      }
       return { data: newReq };
     }
   },
   getRequests: () =>
-    safeApiCall(() => api.get<WaiterRequest[]>('/waiter/requests'), MOCK_WAITER_REQUESTS),
+    safeApiCall(
+      () => api.get<WaiterRequest[]>('/waiter/requests'),
+      () => {
+        const raw = localStorage.getItem('lowkey_demo_waiter_requests');
+        if (raw) {
+          try {
+            const list: WaiterRequest[] = JSON.parse(raw);
+            return list.filter((r) => r.status !== 'RESOLVED');
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        // Initialize localStorage with initial active mock requests
+        localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(MOCK_WAITER_REQUESTS));
+        return MOCK_WAITER_REQUESTS.filter((r) => r.status !== 'RESOLVED');
+      }
+    ),
   acceptRequest: async (id: number) => {
     try {
-      return await api.patch<WaiterRequest>(`/waiter/requests/${id}/accept`);
+      const res = await api.patch<WaiterRequest>(`/waiter/requests/${id}/accept`);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
+        throw new Error('Invalid acceptRequest response');
+      }
+      return res;
     } catch {
-      return { data: { id, status: 'IN_PROGRESS', assignedWaiterName: 'Lead Waiter Alex' } as any };
+      const raw = localStorage.getItem('lowkey_demo_waiter_requests');
+      const list: WaiterRequest[] = raw ? JSON.parse(raw) : [...MOCK_WAITER_REQUESTS];
+      let updated: WaiterRequest | null = null;
+      const nextList = list.map((r) => {
+        if (r.id === id) {
+          updated = {
+            ...r,
+            status: 'IN_PROGRESS' as const,
+            assignedWaiterName: 'Lead Waiter Alex',
+          };
+          return updated;
+        }
+        return r;
+      });
+      localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(nextList));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
+      }
+      return {
+        data: updated || {
+          id,
+          tableNumber: 4,
+          requestType: 'ASSISTANCE',
+          status: 'IN_PROGRESS',
+          assignedWaiterName: 'Lead Waiter Alex',
+          requestedAt: new Date().toISOString(),
+        },
+      };
     }
   },
   resolveRequest: async (id: number) => {
     try {
-      return await api.patch<WaiterRequest>(`/waiter/requests/${id}/resolve`);
+      const res = await api.patch<WaiterRequest>(`/waiter/requests/${id}/resolve`);
+      if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
+        throw new Error('Invalid resolveRequest response');
+      }
+      return res;
     } catch {
+      const raw = localStorage.getItem('lowkey_demo_waiter_requests');
+      const list: WaiterRequest[] = raw ? JSON.parse(raw) : [...MOCK_WAITER_REQUESTS];
+      // Filter out resolved request permanently
+      const nextList = list.filter((r) => r.id !== id);
+      localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(nextList));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
+      }
       return { data: { id, status: 'RESOLVED' } as any };
     }
   },

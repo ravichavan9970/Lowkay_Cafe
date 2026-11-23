@@ -29,11 +29,23 @@ export const WaiterDashboard: React.FC = () => {
   // Load floor tables and assistance requests
   const loadFloor = () => {
     tableApi.getTables().then((res) => setTables(Array.isArray(res.data) ? res.data : [])).catch(console.error);
-    waiterApi.getRequests().then((res) => setRequests(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    waiterApi.getRequests().then((res) => {
+      const activeList = Array.isArray(res.data) ? res.data.filter((r) => r.status !== 'RESOLVED') : [];
+      setRequests(activeList);
+    }).catch(console.error);
   };
 
   useEffect(() => {
     loadFloor();
+
+    // Event listener for local waiter requests synchronization
+    const handleSync = () => {
+      waiterApi.getRequests().then((res) => {
+        const activeList = Array.isArray(res.data) ? res.data.filter((r) => r.status !== 'RESOLVED') : [];
+        setRequests(activeList);
+      }).catch(console.error);
+    };
+    window.addEventListener('lowkey_waiter_update', handleSync);
 
     // Subscribe to table floor updates
     const subTables = wsService.subscribe('/topic/tables', (updatedTable: Table) => {
@@ -55,10 +67,10 @@ export const WaiterDashboard: React.FC = () => {
           return [newOrUpdatedReq, ...prev];
         }
       });
-      loadFloor();
     });
 
     return () => {
+      window.removeEventListener('lowkey_waiter_update', handleSync);
       wsService.unsubscribe(subTables);
       wsService.unsubscribe(subRequests);
     };
@@ -67,19 +79,45 @@ export const WaiterDashboard: React.FC = () => {
   const handleAcceptRequest = async (id: number) => {
     try {
       const res = await waiterApi.acceptRequest(id);
-      setRequests((prev) => prev.map((r) => (r.id === id ? res.data : r)));
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                ...res.data,
+                status: 'IN_PROGRESS',
+                assignedWaiterName: res.data.assignedWaiterName || 'Lead Waiter Alex',
+              }
+            : r
+        )
+      );
     } catch (err) {
       console.error(err);
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, status: 'IN_PROGRESS', assignedWaiterName: 'Lead Waiter Alex' } : r
+        )
+      );
     }
   };
 
   const handleResolveRequest = async (id: number) => {
     try {
       await waiterApi.resolveRequest(id);
+      const targetReq = requests.find((r) => r.id === id);
       setRequests((prev) => prev.filter((r) => r.id !== id));
-      loadFloor();
+      if (targetReq) {
+        setTables((prev) =>
+          prev.map((t) =>
+            t.tableNumber === targetReq.tableNumber && t.status === 'ASSISTANCE_REQUESTED'
+              ? { ...t, status: 'OCCUPIED' }
+              : t
+          )
+        );
+      }
     } catch (err) {
       console.error(err);
+      setRequests((prev) => prev.filter((r) => r.id !== id));
     }
   };
 
