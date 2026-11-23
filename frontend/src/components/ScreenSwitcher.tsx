@@ -31,7 +31,7 @@ export const ScreenSwitcher: React.FC = () => {
     currentPath.startsWith('/login');
 
   const isStaffUser =
-    user && user.roles && user.roles.some((r) => r !== 'ROLE_CUSTOMER');
+    user && Array.isArray(user.roles) && user.roles.some((r) => r !== 'ROLE_CUSTOMER');
 
   if (isDismissed || (!isStaffRoute && !isStaffUser)) {
     return null;

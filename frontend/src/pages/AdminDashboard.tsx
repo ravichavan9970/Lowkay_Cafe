@@ -62,10 +62,12 @@ export const AdminDashboard: React.FC = () => {
 
   // Network & Mobile QR Target URL
   const [networkInfo, setNetworkInfo] = useState<{ lanIp: string; recommendedBaseUrl: string }>({
-    lanIp: '10.242.100.245',
-    recommendedBaseUrl: 'http://10.242.100.245:5173',
+    lanIp: typeof window !== 'undefined' ? window.location.hostname : 'lowkey-cafe-three.vercel.app',
+    recommendedBaseUrl: typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app',
   });
-  const [customQrBaseUrl, setCustomQrBaseUrl] = useState('http://10.242.100.245:5173');
+  const [customQrBaseUrl, setCustomQrBaseUrl] = useState(
+    typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app'
+  );
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
 
   // New Food Item Form
@@ -574,16 +576,17 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[11px] text-stone-400 -mt-2">{table.floorZone} • {table.seatingCapacity} seats</span>
 
                   {/* QR Image */}
-                  <div className="w-36 h-36 bg-stone-50 border border-stone-200 rounded-2xl p-2 flex items-center justify-center shadow-inner relative group">
-                    {table.qrImageData ? (
-                      <img
-                        src={table.qrImageData}
-                        alt={`Table ${table.tableNumber} QR`}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <QrCode className="w-12 h-12 text-stone-300" />
-                    )}
+                  <div className="w-36 h-36 bg-white border border-stone-200 rounded-2xl p-2 flex items-center justify-center shadow-inner relative group">
+                    <img
+                      src={
+                        table.qrImageData ||
+                        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(
+                          table.qrTargetUrl || `https://lowkey-cafe-three.vercel.app/table/${table.tableNumber}`
+                        )}`
+                      }
+                      alt={`Table ${table.tableNumber} QR`}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
 
                   {/* QR target link preview */}
@@ -997,7 +1000,12 @@ export const AdminDashboard: React.FC = () => {
               
               <div className="w-48 h-48 mx-auto bg-stone-50 p-2 border border-stone-200 rounded-xl mb-3 flex items-center justify-center">
                 <img
-                  src={selectedQrTable.qrImageData}
+                  src={
+                    selectedQrTable.qrImageData ||
+                    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(
+                      selectedQrTable.qrTargetUrl || `https://lowkey-cafe-three.vercel.app/table/${selectedQrTable.tableNumber}`
+                    )}`
+                  }
                   alt={`Table ${selectedQrTable.tableNumber} QR`}
                   className="w-full h-full object-contain"
                 />
@@ -1006,7 +1014,9 @@ export const AdminDashboard: React.FC = () => {
               <span className="font-display font-black text-3xl text-stone-900 block">
                 TABLE {selectedQrTable.tableNumber}
               </span>
-              <p className="text-[10px] text-stone-400 mt-1 font-mono break-all">{selectedQrTable.qrTargetUrl || `http://${networkInfo.lanIp}:5173/table/${selectedQrTable.tableNumber}`}</p>
+              <p className="text-[10px] text-stone-400 mt-1 font-mono break-all">
+                {selectedQrTable.qrTargetUrl || `https://lowkey-cafe-three.vercel.app/table/${selectedQrTable.tableNumber}`}
+              </p>
               <div className="mt-3 py-1.5 px-3 bg-stone-100 rounded-xl text-[11px] text-stone-700 flex flex-col gap-0.5 text-center">
                 <span className="font-semibold text-stone-800">📶 Wi-Fi: {settingsForm.wifiName}</span>
                 <span className="text-stone-500">Password: <strong className="text-stone-800 font-mono">{settingsForm.wifiPassword}</strong></span>

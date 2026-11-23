@@ -611,6 +611,7 @@ export const MOCK_TABLES: Table[] = Array.from({ length: 10 }, (_, i) => {
   const zone = num <= 4 ? 'Indoor Lounge' : num <= 8 ? 'Patio Garden' : 'Rooftop Terrace';
   const capacity = num % 3 === 0 ? 6 : num % 2 === 0 ? 4 : 2;
   const status = num === 2 ? 'OCCUPIED' : num === 4 ? 'AVAILABLE' : num === 7 ? 'PREPARING' : 'AVAILABLE';
+  const fullTargetUrl = `https://lowkey-cafe-three.vercel.app/table/${num}?token=demo-token-tbl-${num}`;
   return {
     id: num,
     tableNumber: num,
@@ -619,8 +620,8 @@ export const MOCK_TABLES: Table[] = Array.from({ length: 10 }, (_, i) => {
     status,
     isActive: true,
     accessToken: `demo-token-tbl-${num}`,
-    qrTargetUrl: `/table/${num}?token=demo-token-tbl-${num}`,
-    qrImageData: '',
+    qrTargetUrl: fullTargetUrl,
+    qrImageData: `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(fullTargetUrl)}`,
   };
 });
 

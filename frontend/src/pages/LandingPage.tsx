@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Coffee,
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { MOCK_TABLES, MOCK_FOOD_ITEMS, MOCK_CATEGORIES } from '../services/mockData';
 import { Table, FoodItem, Category } from '../types';
+import { generateQrDataUrl, downloadQrCode, getLiveQrUrl } from '../services/qrService';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +49,21 @@ export const LandingPage: React.FC = () => {
     type: 'TABLE' | 'TAKEAWAY';
     tableNum?: number;
   } | null>(null);
+
+  // High-contrast QR codes for instant mobile phone scanning
+  const [takeawayQrDataUrl, setTakeawayQrDataUrl] = useState<string>('');
+  const [modalQrDataUrl, setModalQrDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    generateQrDataUrl('/takeaway').then(setTakeawayQrDataUrl).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (activeQrModal) {
+      setModalQrDataUrl('');
+      generateQrDataUrl(activeQrModal.url).then(setModalQrDataUrl).catch(console.error);
+    }
+  }, [activeQrModal]);
 
   // Copied Wi-Fi password state
   const [copiedWifi, setCopiedWifi] = useState(false);
@@ -76,12 +92,6 @@ export const LandingPage: React.FC = () => {
     navigator.clipboard.writeText('lowkeycoffee');
     setCopiedWifi(true);
     setTimeout(() => setCopiedWifi(false), 2000);
-  };
-
-  const getQrImageUrl = (targetPath: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app';
-    const fullUrl = encodeURIComponent(`${origin}${targetPath}`);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&color=0a0a0a&bgcolor=facc15&margin=10&data=${fullUrl}`;
   };
 
   return (
@@ -435,15 +445,23 @@ export const LandingPage: React.FC = () => {
                 </span>
 
                 {/* QR Code Container */}
-                <div className="p-4 bg-white rounded-2xl shadow-xl border-4 border-yellow-400 relative group-hover:scale-105 transition-transform duration-300">
-                  <img
-                    src={getQrImageUrl('/takeaway')}
-                    alt="Takeaway Ordering QR Code"
-                    className="w-56 h-56 object-contain rounded-lg"
-                  />
+                <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-yellow-400 relative group-hover:scale-105 transition-transform duration-300">
+                  {takeawayQrDataUrl ? (
+                    <img
+                      src={takeawayQrDataUrl}
+                      alt="Takeaway Ordering QR Code"
+                      className="w-56 h-56 object-contain rounded-lg"
+                    />
+                  ) : (
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(getLiveQrUrl('/takeaway'))}`}
+                      alt="Takeaway Ordering QR Code"
+                      className="w-56 h-56 object-contain rounded-lg"
+                    />
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 backdrop-blur-[2px] transition-opacity rounded-xl">
                     <span className="px-3 py-1 rounded-lg bg-yellow-400 text-black text-xs font-black shadow-lg">
-                      Scan with Camera
+                      Scan with Phone Camera
                     </span>
                   </div>
                 </div>
@@ -839,16 +857,38 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* High-Res QR Image */}
-            <div className="p-4 bg-white rounded-2xl border-4 border-yellow-400 shadow-xl inline-block mx-auto">
-              <img
-                src={getQrImageUrl(activeQrModal.url)}
-                alt={activeQrModal.title}
-                className="w-56 h-56 object-contain"
-              />
+            <div className="p-3 bg-white rounded-2xl border-4 border-yellow-400 shadow-xl inline-block mx-auto">
+              {modalQrDataUrl ? (
+                <img
+                  src={modalQrDataUrl}
+                  alt={activeQrModal.title}
+                  className="w-56 h-56 object-contain"
+                />
+              ) : (
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(getLiveQrUrl(activeQrModal.url))}`}
+                  alt={activeQrModal.title}
+                  className="w-56 h-56 object-contain"
+                />
+              )}
+            </div>
+
+            {/* Target URL Preview & Copy */}
+            <div className="p-2.5 rounded-xl bg-black/60 border border-neutral-800 text-left">
+              <span className="text-[10px] text-neutral-400 block font-semibold mb-0.5">Scannable Mobile Target Link:</span>
+              <a
+                href={getLiveQrUrl(activeQrModal.url)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-mono text-yellow-400 hover:underline break-all flex items-center gap-1"
+              >
+                <span>{getLiveQrUrl(activeQrModal.url)}</span>
+                <ExternalLink className="w-3 h-3 shrink-0" />
+              </a>
             </div>
 
             {/* Action Buttons inside Modal */}
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               <button
                 onClick={() => {
                   navigate(activeQrModal.url);
@@ -856,18 +896,23 @@ export const LandingPage: React.FC = () => {
                 }}
                 className="w-full py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
               >
-                <span>Directly Open Menu Link</span>
+                <span>Directly Open Menu On This Device</span>
                 <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
               </button>
 
               <button
                 onClick={() => {
-                  window.open(getQrImageUrl(activeQrModal.url), '_blank');
+                  downloadQrCode(
+                    activeQrModal.url,
+                    activeQrModal.type === 'TAKEAWAY'
+                      ? 'Lowkey_Cafe_Takeaway_QR.png'
+                      : `Lowkey_Cafe_Table_${activeQrModal.tableNum}_QR.png`
+                  );
                 }}
                 className="w-full py-2 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Download className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Download High-Res QR Image</span>
+                <span>Download High-Res QR Image (PNG)</span>
               </button>
             </div>
 

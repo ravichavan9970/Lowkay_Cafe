@@ -579,27 +579,46 @@ export const adminApi = {
       () => api.get<Order[]>(`/admin/orders?${startDate ? `startDate=${startDate}&` : ''}${endDate ? `endDate=${endDate}` : ''}`),
       MOCK_ORDERS
     ),
-  createTable: (data: any) =>
-    safeApiCall(() => api.post<Table>('/admin/tables', data), { id: Date.now(), tableNumber: data.tableNumber, seatingCapacity: data.seatingCapacity, floorZone: data.floorZone, status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: `/table/${data.tableNumber}`, qrImageData: '' }),
-  regenerateQr: (tableNum: number, baseUrl?: string) =>
-    safeApiCall(
+  createTable: (data: any) => {
+    const base = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app';
+    const targetUrl = `${base}/table/${data.tableNumber}`;
+    const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(targetUrl)}`;
+    return safeApiCall(() => api.post<Table>('/admin/tables', data), { id: Date.now(), tableNumber: data.tableNumber, seatingCapacity: data.seatingCapacity, floorZone: data.floorZone, status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: targetUrl, qrImageData: qrImg });
+  },
+  regenerateQr: (tableNum: number, baseUrl?: string) => {
+    const base = baseUrl || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app');
+    const targetUrl = `${base}/table/${tableNum}`;
+    const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(targetUrl)}`;
+    return safeApiCall(
       () => api.post<Table>(`/admin/tables/${tableNum}/regenerate-qr${baseUrl ? `?baseUrl=${encodeURIComponent(baseUrl)}` : ''}`),
-      { id: tableNum, tableNumber: tableNum, seatingCapacity: 4, floorZone: 'Indoor Lounge', status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: `${baseUrl || window.location.origin}/table/${tableNum}`, qrImageData: '' }
-    ),
-  regenerateAllQr: (baseUrl?: string) =>
-    safeApiCall(
+      { id: tableNum, tableNumber: tableNum, seatingCapacity: 4, floorZone: 'Indoor Lounge', status: 'AVAILABLE', isActive: true, accessToken: 'demo-token', qrTargetUrl: targetUrl, qrImageData: qrImg }
+    );
+  },
+  regenerateAllQr: (baseUrl?: string) => {
+    const base = baseUrl || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app');
+    return safeApiCall(
       () => api.post<Table[]>(`/admin/tables/regenerate-all-qr${baseUrl ? `?baseUrl=${encodeURIComponent(baseUrl)}` : ''}`),
-      MOCK_TABLES.map((t) => ({ ...t, qrTargetUrl: `${baseUrl || window.location.origin}/table/${t.tableNumber}` }))
-    ),
-  getNetworkInfo: () =>
-    safeApiCall(
+      MOCK_TABLES.map((t) => {
+        const targetUrl = `${base}/table/${t.tableNumber}?token=${t.accessToken}`;
+        return {
+          ...t,
+          qrTargetUrl: targetUrl,
+          qrImageData: `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(targetUrl)}`,
+        };
+      })
+    );
+  },
+  getNetworkInfo: () => {
+    const base = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app';
+    return safeApiCall(
       () => api.get<{ lanIp: string; recommendedBaseUrl: string; hint: string }>('/admin/network-info'),
       {
-        lanIp: window.location.hostname || '10.242.100.245',
-        recommendedBaseUrl: window.location.origin,
-        hint: 'Active Vercel deployment preview',
+        lanIp: typeof window !== 'undefined' ? window.location.hostname : 'lowkey-cafe-three.vercel.app',
+        recommendedBaseUrl: base,
+        hint: 'Active live deployment base URL',
       }
-    ),
+    );
+  },
   createFoodItem: (data: any) =>
     safeApiCall(() => api.post<FoodItem>('/admin/menu/items', data), { id: Date.now(), ...data, isAvailable: true, customizations: [] }),
   toggleAvailability: (id: number) =>

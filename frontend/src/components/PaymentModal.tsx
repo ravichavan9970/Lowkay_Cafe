@@ -252,7 +252,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="flex flex-col items-center text-center">
                   <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-inner border border-stone-200 mb-2 flex items-center justify-center">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=lowkeycafe@upi&pn=Lowkey%20Cafe&am=${payableTotal}&cu=INR`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&color=000000&bgcolor=ffffff&data=${encodeURIComponent(`upi://pay?pa=lowkeycafe@upi&pn=Lowkey%20Cafe&am=${payableTotal}&cu=INR`)}`}
                       alt="UPI QR Code"
                       className="w-full h-full object-contain"
                     />
