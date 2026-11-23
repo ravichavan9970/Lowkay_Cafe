@@ -298,7 +298,23 @@ export const kitchenApi = {
       return res;
     } catch {
       const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason);
-      return { data: updated || ({ id: orderId, status, items: [] } as any) };
+      return {
+        data: updated || {
+          id: orderId,
+          orderCode: `ORD-${orderId}`,
+          tableNumber: 4,
+          customerName: 'Guest Diner',
+          status: status as any,
+          subtotal: 748,
+          taxAmount: 37.4,
+          serviceCharge: 37.4,
+          discountAmount: 0,
+          grandTotal: 822.8,
+          estimatedPrepMinutes: 12,
+          createdAt: new Date().toISOString(),
+          items: [],
+        },
+      };
     }
   },
 };
@@ -312,17 +328,6 @@ export const waiterApi = {
       }
       return res;
     } catch {
-      const raw = localStorage.getItem('lowkey_demo_waiter_requests');
-      const list: WaiterRequest[] = raw ? JSON.parse(raw) : [...MOCK_WAITER_REQUESTS];
-
-      // Prevent duplicate pending requests for the same table and request type
-      const activeExisting = list.find(
-        (r) => r.tableNumber === data.tableNumber && r.requestType === data.requestType && r.status !== 'RESOLVED'
-      );
-      if (activeExisting) {
-        return { data: activeExisting };
-      }
-
       const newReq: WaiterRequest = {
         id: Date.now(),
         tableNumber: data.tableNumber,
@@ -331,33 +336,22 @@ export const waiterApi = {
         additionalNote: data.additionalNote,
         requestedAt: new Date().toISOString(),
       };
-
-      const nextList = [newReq, ...list];
-      localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(nextList));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
-      }
-      return { data: newReq };
+      const saved = await cloudSync.callWaiter(newReq);
+      return { data: saved };
     }
   },
-  getRequests: () =>
-    safeApiCall(
-      () => api.get<WaiterRequest[]>('/waiter/requests'),
-      () => {
-        const raw = localStorage.getItem('lowkey_demo_waiter_requests');
-        if (raw) {
-          try {
-            const list: WaiterRequest[] = JSON.parse(raw);
-            return list.filter((r) => r.status !== 'RESOLVED');
-          } catch (e) {
-            console.error(e);
-          }
-        }
-        // Initialize localStorage with initial active mock requests
-        localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(MOCK_WAITER_REQUESTS));
-        return MOCK_WAITER_REQUESTS.filter((r) => r.status !== 'RESOLVED');
+  getRequests: async (): Promise<{ data: WaiterRequest[] }> => {
+    try {
+      const res = await api.get<WaiterRequest[]>('/waiter/requests');
+      if (isHtmlResponse(res.data) || !Array.isArray(res.data)) {
+        throw new Error('Invalid waiter requests response');
       }
-    ),
+      return res;
+    } catch {
+      const list = await cloudSync.getWaiterRequests();
+      return { data: list };
+    }
+  },
   acceptRequest: async (id: number) => {
     try {
       const res = await api.patch<WaiterRequest>(`/waiter/requests/${id}/accept`);
@@ -366,24 +360,7 @@ export const waiterApi = {
       }
       return res;
     } catch {
-      const raw = localStorage.getItem('lowkey_demo_waiter_requests');
-      const list: WaiterRequest[] = raw ? JSON.parse(raw) : [...MOCK_WAITER_REQUESTS];
-      let updated: WaiterRequest | null = null;
-      const nextList = list.map((r) => {
-        if (r.id === id) {
-          updated = {
-            ...r,
-            status: 'IN_PROGRESS' as const,
-            assignedWaiterName: 'Lead Waiter Alex',
-          };
-          return updated;
-        }
-        return r;
-      });
-      localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(nextList));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
-      }
+      const updated = await cloudSync.acceptWaiterRequest(id);
       return {
         data: updated || {
           id,
@@ -404,14 +381,7 @@ export const waiterApi = {
       }
       return res;
     } catch {
-      const raw = localStorage.getItem('lowkey_demo_waiter_requests');
-      const list: WaiterRequest[] = raw ? JSON.parse(raw) : [...MOCK_WAITER_REQUESTS];
-      // Filter out resolved request permanently
-      const nextList = list.filter((r) => r.id !== id);
-      localStorage.setItem('lowkey_demo_waiter_requests', JSON.stringify(nextList));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
-      }
+      await cloudSync.resolveWaiterRequest(id);
       return { data: { id, status: 'RESOLVED' } as any };
     }
   },

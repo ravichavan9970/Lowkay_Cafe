@@ -39,14 +39,15 @@ export const KDSView: React.FC = () => {
   useEffect(() => {
     loadData();
 
-    // 1. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS every 3s)
+    // 1. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS in real time)
     const unsubCloud = cloudSync.subscribeToOrders((cloudOrders) => {
       setOrders((prev) => {
         const activeCloud = (cloudOrders || []).filter(
-          (o) => o.status !== 'SERVED' && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+          (o) => o && o.status !== 'SERVED' && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
         );
-        const prevIds = new Set(prev.map((o) => o.id));
-        const hasNew = activeCloud.some((o) => !prevIds.has(o.id));
+        const safePrev = Array.isArray(prev) ? prev : [];
+        const prevIds = new Set(safePrev.map((o) => o?.id));
+        const hasNew = Array.isArray(activeCloud) && activeCloud.some((o) => o && !prevIds.has(o.id));
         if (hasNew && soundEnabled) {
           try {
             const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -60,7 +61,7 @@ export const KDSView: React.FC = () => {
         }
         return activeCloud;
       });
-    }, 3000);
+    });
 
     // 2. Subscribe to live kitchen updates via WebSocket
     const subId = wsService.subscribe('/topic/kitchen', (newOrUpdatedOrder: Order) => {

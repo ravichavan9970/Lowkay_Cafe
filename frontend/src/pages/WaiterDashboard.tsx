@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { waiterApi, tableApi, billingApi } from '../services/api';
+import { cloudSync } from '../services/cloudSyncService';
 import { Table, WaiterRequest, Bill } from '../types';
 import wsService from '../services/websocket';
 import { Link } from 'react-router-dom';
@@ -38,7 +39,12 @@ export const WaiterDashboard: React.FC = () => {
   useEffect(() => {
     loadFloor();
 
-    // Event listener for local waiter requests synchronization
+    // 1. Subscribe to live cloud waiter requests (cross-device sync)
+    const unsubCloud = cloudSync.subscribeToWaiterRequests((reqList) => {
+      setRequests(reqList);
+    });
+
+    // 2. Event listener for local waiter requests synchronization
     const handleSync = () => {
       waiterApi.getRequests().then((res) => {
         const activeList = Array.isArray(res.data) ? res.data.filter((r) => r.status !== 'RESOLVED') : [];
@@ -47,12 +53,12 @@ export const WaiterDashboard: React.FC = () => {
     };
     window.addEventListener('lowkey_waiter_update', handleSync);
 
-    // Subscribe to table floor updates
+    // 3. Subscribe to table floor updates
     const subTables = wsService.subscribe('/topic/tables', (updatedTable: Table) => {
       setTables((prev) => prev.map((t) => (t.id === updatedTable.id ? updatedTable : t)));
     });
 
-    // Subscribe to incoming waiter requests
+    // 4. Subscribe to incoming waiter requests via websocket
     const subRequests = wsService.subscribe('/topic/waiter-requests', (newOrUpdatedReq: WaiterRequest) => {
       setRequests((prev) => {
         if (newOrUpdatedReq.status === 'RESOLVED') {
@@ -69,11 +75,8 @@ export const WaiterDashboard: React.FC = () => {
       });
     });
 
-    // Auto-poll floor status every 4s
-    const pollId = setInterval(loadFloor, 4000);
-
     return () => {
-      clearInterval(pollId);
+      unsubCloud();
       window.removeEventListener('lowkey_waiter_update', handleSync);
       wsService.unsubscribe(subTables);
       wsService.unsubscribe(subRequests);
