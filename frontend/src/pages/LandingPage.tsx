@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Coffee,
   ShoppingBag,
   QrCode,
-  Wifi,
   Clock,
   MapPin,
   Phone,
@@ -13,99 +12,133 @@ import {
   UtensilsCrossed,
   Flame,
   CheckCircle2,
-  Users,
   ChevronRight,
-  Download,
-  Printer,
-  X,
-  ExternalLink,
-  ShieldCheck,
-  Star,
   Award,
   Heart,
-  Copy,
-  Check,
-  Camera,
+  Leaf,
+  ShieldCheck,
+  Star,
+  Layers,
 } from 'lucide-react';
-import { MOCK_TABLES, MOCK_FOOD_ITEMS, MOCK_CATEGORIES } from '../services/mockData';
-import { Table, FoodItem, Category } from '../types';
-import { generateQrDataUrl, downloadQrCode, getLiveQrUrl } from '../services/qrService';
-import CameraQrScanner from '../components/CameraQrScanner';
+
+interface SpecialityItem {
+  id: number;
+  name: string;
+  category: string;
+  typeFilter: 'COFFEE' | 'PIZZA' | 'BURGER' | 'STARTERS' | 'MAINS' | 'DESSERT';
+  price: number;
+  description: string;
+  imageUrl: string;
+  badge: string;
+  isVeg: boolean;
+}
+
+const CAFE_SPECIALITIES: SpecialityItem[] = [
+  {
+    id: 1,
+    name: 'Spanish Cortado & Velvet Flat White',
+    category: 'Specialty Coffee',
+    typeFilter: 'COFFEE',
+    price: 199,
+    description: 'Double ristretto pull of single-origin Ethiopian beans balanced with warm, textured silky microfoam.',
+    imageUrl: 'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=600&q=80',
+    badge: '100% Arabica',
+    isVeg: true,
+  },
+  {
+    id: 2,
+    name: 'Wild Truffle & Mushroom Sourdough Pizza',
+    category: 'Wood-Fired Pizza',
+    typeFilter: 'PIZZA',
+    price: 499,
+    description: '48-hour cold-fermented sourdough crust topped with roasted portobello mushrooms, white truffle oil & aged mozzarella.',
+    imageUrl: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=600&q=80',
+    badge: '48h Ferment',
+    isVeg: true,
+  },
+  {
+    id: 3,
+    name: 'Smoked Cheddar Brioche Smash Burger',
+    category: 'Gourmet Burgers',
+    typeFilter: 'BURGER',
+    price: 369,
+    description: 'Double-smashed spiced patties on butter-toasted brioche, caramelized shallots, house secret glaze & melted cheddar.',
+    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80',
+    badge: 'Chef Signature',
+    isVeg: false,
+  },
+  {
+    id: 4,
+    name: 'Crispy Korean BBQ Wings',
+    category: 'Small Plates',
+    typeFilter: 'STARTERS',
+    price: 349,
+    description: 'Crispy double-fried chicken wings glazed in sticky spicy-sweet gochujang sauce with toasted white sesame & scallions.',
+    imageUrl: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=600&q=80',
+    badge: 'Guest Favorite',
+    isVeg: false,
+  },
+  {
+    id: 5,
+    name: 'Creamy Truffle Tagliatelle',
+    category: 'Artisanal Pasta',
+    typeFilter: 'MAINS',
+    price: 449,
+    description: 'Fresh egg ribbon pasta tossed in silky black truffle butter emulsion with sautéed cremini mushrooms & aged pecorino.',
+    imageUrl: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281788?auto=format&fit=crop&w=600&q=80',
+    badge: 'Hand-Rolled',
+    isVeg: true,
+  },
+  {
+    id: 6,
+    name: 'Molten Basque Burnt Cheesecake',
+    category: 'Handcrafted Desserts',
+    typeFilter: 'DESSERT',
+    price: 289,
+    description: 'Caramelized burnt exterior with an ultra-creamy, custard-soft center served with fresh tart berry compote.',
+    imageUrl: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80',
+    badge: 'House Baked',
+    isVeg: true,
+  },
+  {
+    id: 7,
+    name: 'Artisan Margherita Di Bufala',
+    category: 'Wood-Fired Pizza',
+    typeFilter: 'PIZZA',
+    price: 429,
+    description: 'San Marzano DOP tomato passata, creamy Campania buffalo mozzarella, fresh sweet basil & cold-pressed EVOO.',
+    imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',
+    badge: 'Authentic Crust',
+    isVeg: true,
+  },
+  {
+    id: 8,
+    name: 'Vanilla Cold Foam Nitro Cold Brew',
+    category: 'Specialty Coffee',
+    typeFilter: 'COFFEE',
+    price: 229,
+    description: '18-hour slow steep cold brew steeped with single-origin beans, crowned with sweet whipped Madagascar vanilla cream.',
+    imageUrl: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80',
+    badge: '18h Steeped',
+    isVeg: true,
+  },
+];
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [activeSpecialityFilter, setActiveSpecialityFilter] = useState<string>('ALL');
 
-  // Selected zone filter for table viewer
-  const [selectedZone, setSelectedZone] = useState<string>('ALL');
-
-  // Camera QR scanner modal
-  const [showCameraScanner, setShowCameraScanner] = useState(false);
-
-  // Interactive full menu state inside Landing Page
-  const [selectedMenuCategory, setSelectedMenuCategory] = useState<number | 'ALL'>('ALL');
-  const [menuSearchQuery, setMenuSearchQuery] = useState('');
-  const [menuVegOnly, setMenuVegOnly] = useState(false);
-  
-  // QR Modal state
-  const [activeQrModal, setActiveQrModal] = useState<{
-    title: string;
-    subtitle: string;
-    url: string;
-    type: 'TABLE' | 'TAKEAWAY';
-    tableNum?: number;
-  } | null>(null);
-
-  // High-contrast QR codes for instant mobile phone scanning
-  const [takeawayQrDataUrl, setTakeawayQrDataUrl] = useState<string>('');
-  const [modalQrDataUrl, setModalQrDataUrl] = useState<string>('');
-
-  useEffect(() => {
-    generateQrDataUrl('/takeaway').then(setTakeawayQrDataUrl).catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (activeQrModal) {
-      setModalQrDataUrl('');
-      generateQrDataUrl(activeQrModal.url).then(setModalQrDataUrl).catch(console.error);
-    }
-  }, [activeQrModal]);
-
-  // Copied Wi-Fi password state
-  const [copiedWifi, setCopiedWifi] = useState(false);
-
-  const zones = ['ALL', 'Indoor Lounge', 'Patio Garden', 'Rooftop Terrace'];
-
-  const filteredTables = selectedZone === 'ALL'
-    ? MOCK_TABLES
-    : MOCK_TABLES.filter((t) => t.floorZone === selectedZone);
-
-  const filteredMenuItems = MOCK_FOOD_ITEMS.filter((item) => {
-    if (selectedMenuCategory !== 'ALL' && item.categoryId !== selectedMenuCategory) {
-      return false;
-    }
-    if (menuVegOnly && !item.isVeg) return false;
-    if (menuSearchQuery.trim()) {
-      const q = menuSearchQuery.toLowerCase();
-      const matchName = item.name.toLowerCase().includes(q);
-      const matchDesc = item.description?.toLowerCase().includes(q);
-      if (!matchName && !matchDesc) return false;
-    }
-    return true;
-  });
-
-  const handleCopyWifi = () => {
-    navigator.clipboard.writeText('lowkeycoffee');
-    setCopiedWifi(true);
-    setTimeout(() => setCopiedWifi(false), 2000);
-  };
+  const filteredSpecialities = activeSpecialityFilter === 'ALL'
+    ? CAFE_SPECIALITIES
+    : CAFE_SPECIALITIES.filter(item => item.typeFilter === activeSpecialityFilter);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-yellow-400 selection:text-black">
       
-      {/* Top Announcement Bar */}
+      {/* Top Announcement Bar (Wi-Fi reference cleanly removed) */}
       <div className="bg-yellow-400 text-black text-xs font-black py-2 px-4 text-center tracking-wide flex items-center justify-center gap-2 shadow-inner">
         <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
-        <span>Welcome to Lowkey Cafe · Free 5G Wi-Fi · Dine-In Contactless QR & Takeaway To-Go Available</span>
+        <span>Welcome to Lowkey Cafe · Specialty Roastery, Wood-Fired Kitchen & Good Vibes</span>
         <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
       </div>
 
@@ -131,38 +164,30 @@ export const LandingPage: React.FC = () => {
           </div>
 
           {/* Quick Header Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-neutral-300">
-            <a href="#menu" className="hover:text-yellow-400 transition-colors">Menu (23+ Items)</a>
-            <a href="#dine-in-tables" className="hover:text-yellow-400 transition-colors">Dine-In Tables</a>
-            <a href="#takeaway-qr" className="hover:text-yellow-400 transition-colors">Takeaway / To-Go</a>
-            <a href="#story" className="hover:text-yellow-400 transition-colors">Our Story</a>
-            <a href="#visit" className="hover:text-yellow-400 transition-colors">Hours & Wi-Fi</a>
+          <nav className="hidden md:flex items-center gap-7 text-xs font-bold text-neutral-300">
+            <a href="#specialities" className="hover:text-yellow-400 transition-colors">Our Specialities</a>
+            <a href="#why-us" className="hover:text-yellow-400 transition-colors">Why Lowkey Cafe</a>
+            <a href="#ambiance" className="hover:text-yellow-400 transition-colors">Ambiance & Seating</a>
+            <a href="#visit" className="hover:text-yellow-400 transition-colors">Hours & Location</a>
           </nav>
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() => setShowCameraScanner(true)}
-              className="px-3 sm:px-4 py-2 rounded-full bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/50 text-yellow-300 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-              title="Scan Table QR with Camera"
-            >
-              <Camera className="w-3.5 h-3.5 text-yellow-400 stroke-[2.5]" />
-              <span>Scan QR</span>
-            </button>
-            <a
-              href="#takeaway-qr"
-              className="px-3 sm:px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-yellow-400/40 text-yellow-300 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              onClick={() => navigate('/takeaway')}
+              className="px-3.5 sm:px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-850 border border-yellow-400/40 text-yellow-300 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              title="Order Takeaway Online"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Takeaway QR</span>
-            </a>
-            <a
-              href="#dine-in-tables"
-              className="px-3.5 sm:px-4 py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
+              <span>Takeaway Order</span>
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-3 sm:px-4 py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
             >
-              <QrCode className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Table Menu</span>
-            </a>
+              <span>Staff Login</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+            </button>
           </div>
         </div>
       </header>
@@ -178,7 +203,7 @@ export const LandingPage: React.FC = () => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider mb-6 animate-pulse">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Artisan Roastery · Gourmet Bistro · Contactless Dining</span>
+            <span>Artisan Roastery · Wood-Fired Kitchen · Contactless Smart Dining</span>
           </div>
 
           {/* Headline */}
@@ -188,33 +213,25 @@ export const LandingPage: React.FC = () => {
 
           {/* Subtitle */}
           <p className="mt-6 text-sm sm:text-base lg:text-lg text-neutral-300 max-w-2xl mx-auto font-medium leading-relaxed">
-            Welcome to <strong className="text-white font-bold">Lowkey Cafe</strong>. Sip ethically sourced single-origin pour-overs, savor 48-hour cold-ferment sourdough pizzas, and bite into brioche smash burgers in a tranquil, modern ambiance.
+            Welcome to <strong className="text-white font-bold">Lowkey Cafe</strong>. Sip ethically sourced single-origin pour-overs, savor 48-hour cold-ferment sourdough pizzas, and enjoy artisanal plates in a serene, modern ambiance.
           </p>
 
           {/* Primary Action Buttons */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-xl mx-auto">
-            <button
-              onClick={() => setShowCameraScanner(true)}
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-md mx-auto">
+            <a
+              href="#specialities"
               className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-yellow-400/25 active:scale-95 transition-all"
             >
-              <Camera className="w-4 h-4 stroke-[2.5]" />
-              <span>Scan Table Stand</span>
-            </button>
-
-            <a
-              href="#menu"
-              className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
-            >
               <UtensilsCrossed className="w-4 h-4 stroke-[2.5]" />
-              <span>Browse Menu</span>
+              <span>Explore Cafe Specialities</span>
             </a>
 
             <a
-              href="#takeaway-qr"
+              href="#why-us"
               className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-white font-black text-sm flex items-center justify-center gap-2 hover:border-yellow-400/50 active:scale-95 transition-all"
             >
-              <ShoppingBag className="w-4 h-4 text-yellow-400" />
-              <span>Takeaway QR</span>
+              <Heart className="w-4 h-4 text-yellow-400" />
+              <span>Why Lowkey</span>
             </a>
           </div>
 
@@ -230,7 +247,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="p-3 rounded-2xl bg-neutral-900/40 border border-neutral-850">
               <span className="text-2xl font-black text-yellow-400">10</span>
-              <p className="text-xs text-neutral-400 font-semibold mt-0.5">Smart QR Tables</p>
+              <p className="text-xs text-neutral-400 font-semibold mt-0.5">Smart QR Table Stands</p>
             </div>
             <div className="p-3 rounded-2xl bg-neutral-900/40 border border-neutral-850">
               <span className="text-2xl font-black text-white">4.9 ★</span>
@@ -240,459 +257,261 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 1: Dine-In Table QR Simulator & Floor Hub */}
-      <section id="dine-in-tables" className="py-16 sm:py-24 border-b border-neutral-850 bg-neutral-950/70 relative">
+      {/* SECTION 1: Curated Cafe Specialities & Signature Dishes */}
+      <section id="specialities" className="py-16 sm:py-24 border-b border-neutral-850">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider mb-2">
-                <UtensilsCrossed className="w-3.5 h-3.5" />
-                <span>Dine-In Customer Experience</span>
-              </div>
-              <h2 className="font-display font-black text-2xl sm:text-4xl text-white tracking-tight">
-                Sitting At A Table? Scan Or Choose Your Table
-              </h2>
-              <p className="text-neutral-400 text-sm mt-1 max-w-xl">
-                When you visit our cafe, sit comfortably at any available table and scan its QR code to browse, customize dishes, and order directly to your table without waiting for staff.
-              </p>
-            </div>
-
-            {/* Actions & Zone Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                onClick={() => setShowCameraScanner(true)}
-                className="px-4 py-2 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
-              >
-                <Camera className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Open Camera Scanner</span>
-              </button>
-
-              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-black border border-neutral-800 overflow-x-auto">
-                {zones.map((zone) => (
-                  <button
-                    key={zone}
-                    onClick={() => setSelectedZone(zone)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
-                      selectedZone === zone
-                        ? 'bg-yellow-400 text-black shadow-md'
-                        : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    {zone === 'ALL' ? 'All Tables (10)' : zone}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Tables Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {filteredTables.map((table: Table) => {
-              const isOccupied = table.status === 'OCCUPIED' || table.status === 'PREPARING';
-              return (
-                <div
-                  key={table.id}
-                  className="group relative p-4 rounded-3xl bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-yellow-400/60 shadow-lg hover:shadow-yellow-400/10 transition-all duration-300 flex flex-col justify-between"
-                >
-                  {/* Table Card Top */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-neutral-800 text-neutral-300">
-                        {table.floorZone}
-                      </span>
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full ${
-                          isOccupied ? 'bg-amber-400' : 'bg-emerald-400'
-                        }`}
-                        title={isOccupied ? 'Occupied / Active' : 'Available'}
-                      ></span>
-                    </div>
-
-                    <div className="my-2">
-                      <h3 className="font-display font-black text-2xl text-white group-hover:text-yellow-400 transition-colors">
-                        Table {table.tableNumber < 10 ? `0${table.tableNumber}` : table.tableNumber}
-                      </h3>
-                      <p className="text-xs text-neutral-400 flex items-center gap-1 mt-0.5">
-                        <Users className="w-3.5 h-3.5 text-neutral-500" />
-                        <span>Up to {table.seatingCapacity} Guests</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Table Card Bottom Actions */}
-                  <div className="mt-4 pt-3 border-t border-neutral-800/80 space-y-2">
-                    <button
-                      onClick={() => navigate(`/table/${table.tableNumber}?token=${table.accessToken}`)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
-                    >
-                      <span>Open Table Menu</span>
-                      <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        setActiveQrModal({
-                          title: `Table #${table.tableNumber} QR Code`,
-                          subtitle: `${table.floorZone} · Capacity ${table.seatingCapacity} Diners`,
-                          url: `/table/${table.tableNumber}?token=${table.accessToken}`,
-                          type: 'TABLE',
-                          tableNum: table.tableNumber,
-                        })
-                      }
-                      className="w-full py-1.5 px-3 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-750 text-neutral-300 hover:text-white text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <QrCode className="w-3 h-3 text-yellow-400" />
-                      <span>View & Scan QR</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Quick Help Tip */}
-          <div className="mt-8 p-4 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400 shrink-0">
-                <QrCode className="w-5 h-5" />
-              </div>
-              <p className="text-xs text-neutral-300 font-medium">
-                Each dining table has an individual physical brass QR stand. Scanning directly takes you to your table's dedicated cart with instant kitchen dispatch.
-              </p>
-            </div>
-            <a
-              href="#dine-in-tables"
-              className="shrink-0 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-white transition-colors"
-            >
-              Choose Your Table Above ↑
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2: Dedicated Takeaway / Outside Customer QR & Ordering */}
-      <section id="takeaway-qr" className="py-16 sm:py-24 border-b border-neutral-850 relative overflow-hidden bg-gradient-to-b from-black via-neutral-950 to-black">
-        {/* Yellow ambient glow */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-400/10 blur-[150px] rounded-full pointer-events-none"></div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            {/* Left Column: Info & Story for Outside Customers */}
-            <div className="lg:col-span-7 space-y-6">
-              
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider">
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>Outside Customers & Grab-And-Go</span>
-              </div>
-
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
-                Not Eating Inside? <br />
-                <span className="text-yellow-400">Order Takeaway / To-Go</span>
-              </h2>
-
-              <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
-                Whether you're taking your morning flat white to the office, picking up artisanal pizzas for a cozy evening, or passing by on the street — order seamlessly without waiting for a table.
-              </p>
-
-              {/* Takeaway Perks */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-yellow-400 text-black flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-4 h-4 stroke-[3]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white">0% Dine-In Service Charge</h4>
-                    <p className="text-xs text-neutral-400">Enjoy full menu pricing with zero restaurant service fee added to your bill.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-yellow-400 text-black flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-4 h-4 stroke-[3]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white">Insulated Hot & Cold Packaging</h4>
-                    <p className="text-xs text-neutral-400">All to-go orders are sealed in 100% biodegradable thermal containers to preserve freshness.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-yellow-400 text-black flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-4 h-4 stroke-[3]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white">Instant Screen & Phone Notification</h4>
-                    <p className="text-xs text-neutral-400">Live order tracker alerts you the second your bag is ready at our dedicated curbside pickup counter.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={() => navigate('/takeaway')}
-                  className="px-6 py-3.5 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center gap-2 shadow-xl shadow-yellow-400/25 active:scale-95 transition-all"
-                >
-                  <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
-                  <span>Start Takeaway Order Now</span>
-                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                </button>
-
-                <button
-                  onClick={() =>
-                    setActiveQrModal({
-                      title: 'Lowkey Cafe Outside Takeaway QR',
-                      subtitle: 'Scan to order to-go food & drinks without dining in',
-                      url: '/takeaway',
-                      type: 'TAKEAWAY',
-                    })
-                  }
-                  className="px-5 py-3.5 rounded-2xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-neutral-200 hover:text-white font-bold text-sm flex items-center gap-2 transition-all active:scale-95"
-                >
-                  <QrCode className="w-4 h-4 text-yellow-400" />
-                  <span>Display / Print Takeaway QR</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Right Column: Prominent Takeaway QR Display Card */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-neutral-900/90 border-2 border-yellow-400/70 shadow-[0_20px_60px_rgba(250,204,21,0.15)] flex flex-col items-center text-center relative group">
-                
-                {/* Top Badge */}
-                <span className="px-3.5 py-1 rounded-full bg-yellow-400 text-black text-xs font-black uppercase tracking-wider mb-4 shadow-md">
-                  Official Takeaway QR
-                </span>
-
-                {/* QR Code Container */}
-                <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-yellow-400 relative group-hover:scale-105 transition-transform duration-300">
-                  {takeawayQrDataUrl ? (
-                    <img
-                      src={takeawayQrDataUrl}
-                      alt="Takeaway Ordering QR Code"
-                      className="w-56 h-56 object-contain rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-56 h-56 flex items-center justify-center">
-                      <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 backdrop-blur-[2px] transition-opacity rounded-xl">
-                    <span className="px-3 py-1 rounded-lg bg-yellow-400 text-black text-xs font-black shadow-lg">
-                      Scan with Phone Camera
-                    </span>
-                  </div>
-                </div>
-
-                {/* Scan Instructions */}
-                <div className="mt-5 space-y-1">
-                  <h3 className="font-display font-black text-lg text-white">
-                    Scan To Order For Pickup
-                  </h3>
-                  <p className="text-xs text-neutral-400">
-                    Point your phone camera to open the menu in Takeaway Mode. No table required!
-                  </p>
-                </div>
-
-                {/* Direct Action Link */}
-                <button
-                  onClick={() => navigate('/takeaway')}
-                  className="mt-5 w-full py-2.5 rounded-xl bg-yellow-400/15 hover:bg-yellow-400/25 border border-yellow-400/40 text-yellow-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all"
-                >
-                  <span>Or Click to Order Takeaway Online</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION 3: Full Interactive Cafe Menu & Culinary Catalog */}
-      <section id="menu" className="py-16 sm:py-24 border-b border-neutral-850">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider mb-2">
-              <UtensilsCrossed className="w-3.5 h-3.5" />
-              <span>Full Cafe Menu · {MOCK_FOOD_ITEMS.length} Handcrafted Items</span>
+              <Flame className="w-3.5 h-3.5" />
+              <span>Handcrafted With Passion</span>
             </div>
             <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight">
-              Explore Our Culinary Menu
+              Our Signature Specialities
             </h2>
             <p className="text-neutral-400 text-sm mt-2">
-              Browse artisan wood-fired sourdough pizzas, brioche smash burgers, specialty espresso pulls, and molten Basque cheesecakes.
+              From in-house roasted specialty beans to slow cold-fermented sourdough crusts and melted Basque cheesecakes.
             </p>
           </div>
 
-          {/* Search, Dietary Filter & Category Controls */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-            
-            {/* Search Input */}
-            <div className="relative w-full md:w-80">
-              <input
-                type="text"
-                placeholder="Search dishes, ingredients, or drinks..."
-                value={menuSearchQuery}
-                onChange={(e) => setMenuSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-500 text-xs focus:outline-none focus:border-yellow-400 transition-all"
-              />
-              <span className="absolute left-3.5 top-3 text-neutral-400">🔍</span>
-            </div>
-
-            {/* Veg Only Toggle */}
-            <button
-              onClick={() => setMenuVegOnly(!menuVegOnly)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 border transition-all ${
-                menuVegOnly
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-sm'
-                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
-              }`}
-            >
-              <span className={`w-2.5 h-2.5 rounded-full ${menuVegOnly ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-600'}`}></span>
-              <span>100% Pure Veg Dishes</span>
-            </button>
-          </div>
-
-          {/* Category Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-8">
-            <button
-              onClick={() => setSelectedMenuCategory('ALL')}
-              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
-                selectedMenuCategory === 'ALL'
-                  ? 'bg-yellow-400 text-black shadow-md'
-                  : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white border border-neutral-800'
-              }`}
-            >
-              All Items ({MOCK_FOOD_ITEMS.length})
-            </button>
-            {MOCK_CATEGORIES.map((cat) => (
+          {/* Filter Pills */}
+          <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-10">
+            {[
+              { id: 'ALL', label: 'All Specialities' },
+              { id: 'COFFEE', label: 'Specialty Coffee' },
+              { id: 'PIZZA', label: 'Sourdough Pizzas' },
+              { id: 'BURGER', label: 'Smash Burgers' },
+              { id: 'STARTERS', label: 'Small Plates' },
+              { id: 'MAINS', label: 'Artisanal Pasta' },
+              { id: 'DESSERT', label: 'Desserts' },
+            ].map(tab => (
               <button
-                key={cat.id}
-                onClick={() => setSelectedMenuCategory(cat.id)}
+                key={tab.id}
+                onClick={() => setActiveSpecialityFilter(tab.id)}
                 className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all ${
-                  selectedMenuCategory === cat.id
-                    ? 'bg-yellow-400 text-black shadow-md'
+                  activeSpecialityFilter === tab.id
+                    ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/20'
                     : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white border border-neutral-800'
                 }`}
               >
-                {cat.name}
+                {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Dish Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredMenuItems.map((item) => (
+          {/* Specialities Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredSpecialities.map(dish => (
               <div
-                key={item.id}
-                className="group rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/50 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10 flex flex-col justify-between"
+                key={dish.id}
+                className="group rounded-3xl bg-neutral-900/90 border border-neutral-800 hover:border-yellow-400/60 overflow-hidden transition-all duration-300 shadow-lg hover:shadow-yellow-400/10 flex flex-col justify-between"
               >
                 <div>
-                  <div className="h-44 overflow-hidden relative">
+                  <div className="h-48 overflow-hidden relative">
                     <img
-                      src={item.imageUrl}
-                      alt={item.name}
+                      src={dish.imageUrl}
+                      alt={dish.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                      <span className={`w-3.5 h-3.5 rounded-full border-2 ${item.isVeg ? 'border-emerald-500 bg-emerald-500/40' : 'border-rose-500 bg-rose-500/40'} flex items-center justify-center`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                      <span className={`w-3.5 h-3.5 rounded-full border-2 ${dish.isVeg ? 'border-emerald-500 bg-emerald-500/40' : 'border-rose-500 bg-rose-500/40'} flex items-center justify-center`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[10px] font-bold text-neutral-300 border border-neutral-800">
-                        {item.categoryName}
+                        {dish.category}
                       </span>
                     </div>
-                    {item.isSpecialOffer && (
-                      <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase shadow-md">
-                        Special Offer
-                      </span>
-                    )}
+                    <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase shadow-md">
+                      {dish.badge}
+                    </span>
                   </div>
 
-                  <div className="p-4">
+                  <div className="p-5">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-display font-black text-sm text-white group-hover:text-yellow-400 transition-colors">
-                        {item.name}
+                      <h3 className="font-display font-black text-base text-white group-hover:text-yellow-400 transition-colors">
+                        {dish.name}
                       </h3>
-                      <span className="font-black text-yellow-400 text-sm whitespace-nowrap">
-                        ₹{item.price}
+                      <span className="font-black text-yellow-400 text-base whitespace-nowrap">
+                        ₹{dish.price}
                       </span>
                     </div>
-                    <p className="text-neutral-400 text-xs mt-1.5 line-clamp-2 leading-relaxed">
-                      {item.description}
+                    <p className="text-neutral-400 text-xs mt-2 line-clamp-3 leading-relaxed">
+                      {dish.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 pt-0">
-                  <div className="pt-3 border-t border-neutral-800/80 flex items-center gap-2">
+                <div className="p-5 pt-0">
+                  <div className="pt-3 border-t border-neutral-800/80 flex items-center justify-between text-xs text-neutral-400">
+                    <span className="inline-flex items-center gap-1 text-yellow-400 font-semibold text-[11px]">
+                      <Sparkles className="w-3 h-3" /> Cafe Signature
+                    </span>
                     <button
                       onClick={() => navigate('/takeaway')}
-                      className="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                      className="text-xs font-bold text-white hover:text-yellow-400 flex items-center gap-1 transition-colors"
                     >
-                      <ShoppingBag className="w-3 h-3 text-yellow-400" />
                       <span>Takeaway</span>
+                      <ArrowRight className="w-3 h-3" />
                     </button>
-                    <a
-                      href="#dine-in-tables"
-                      className="flex-1 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black transition-colors flex items-center justify-center gap-1 shadow-md shadow-yellow-400/10"
-                    >
-                      <QrCode className="w-3 h-3 stroke-[2.5]" />
-                      <span>Dine-In</span>
-                    </a>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {filteredMenuItems.length === 0 && (
-            <div className="text-center py-16 text-neutral-400">
-              <p className="text-sm">No dishes matched your search criteria.</p>
-              <button
-                onClick={() => {
-                  setMenuSearchQuery('');
-                  setMenuVegOnly(false);
-                  setSelectedMenuCategory('ALL');
-                }}
-                className="mt-3 px-4 py-2 rounded-xl bg-neutral-800 text-white text-xs font-bold"
-              >
-                Reset Filters
-              </button>
+          {/* Table QR Dining Notice Card */}
+          <div className="mt-12 p-6 rounded-3xl bg-neutral-900/60 border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400 shrink-0">
+                <QrCode className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-display font-black text-base text-white">
+                  Visiting Our Cafe? Order Directly From Your Table
+                </h4>
+                <p className="text-xs text-neutral-400 mt-0.5 max-w-xl">
+                  Every dining table at Lowkey Cafe features a physical engraved QR stand. Simply sit down, point your phone camera, browse our full live seasonal menu, and order instantly.
+                </p>
+              </div>
             </div>
-          )}
+            <button
+              onClick={() => navigate('/takeaway')}
+              className="shrink-0 px-5 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-yellow-400/20"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Or Order Online for Takeaway</span>
+            </button>
+          </div>
 
         </div>
       </section>
 
-      {/* SECTION 4: Cafe Philosophy & Ambiance Zones */}
-      <section id="story" className="py-16 sm:py-24 border-b border-neutral-850 bg-neutral-950/60">
+      {/* SECTION 2: What Makes Lowkey Cafe Special (Good Things About Our Cafe) */}
+      <section id="why-us" className="py-16 sm:py-24 border-b border-neutral-850 bg-neutral-950/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider mb-2">
+              <Award className="w-3.5 h-3.5" />
+              <span>The Lowkey Standard</span>
+            </div>
+            <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight">
+              Good Things About Our Cafe
+            </h2>
+            <p className="text-neutral-400 text-sm mt-2">
+              We obsess over the culinary details, ethical sourcing, and quiet luxury so you can enjoy every visit.
+            </p>
+          </div>
+
+          {/* 6 Feature Pillars Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            {/* Pillar 1: Single Origin */}
+            <div className="p-7 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/40 transition-all space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+                <Coffee className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-black text-lg text-white">100% Single-Origin Arabica</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Direct-trade beans sourced from high-altitude estates in Chikmagalur and Ethiopia. Micro-roasted in small batches to preserve chocolate, floral, and citrus notes with a velvety crema.
+              </p>
+            </div>
+
+            {/* Pillar 2: 48h Ferment */}
+            <div className="p-7 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/40 transition-all space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+                <Flame className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-black text-lg text-white">48-Hour Cold Fermentation</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Our sourdough pizza dough and buttery brioche buns undergo 48 hours of slow, wild-yeast cold fermentation. The result is an airy, blistered crust that is incredibly light and easy to digest.
+              </p>
+            </div>
+
+            {/* Pillar 3: Farm-Fresh Ingredients */}
+            <div className="p-7 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/40 transition-all space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+                <Leaf className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-black text-lg text-white">Artisanal & Farm-Fresh</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                We use authentic Italian San Marzano tomatoes, Fior di Latte mozzarella, hand-picked seasonal organic herbs, and zero artificial preservatives or frozen bases.
+              </p>
+            </div>
+
+            {/* Pillar 4: Smart QR Dining */}
+            <div className="p-7 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/40 transition-all space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+                <QrCode className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-black text-lg text-white">Physical QR Dining Stands</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                All 10 tables feature custom physical QR stands. Scan with your phone to browse, add notes, and send orders straight to the kitchen display with zero waiting for paper menus or staff.
+              </p>
+            </div>
+
+            {/* Pillar 5: Acoustic Lounge */}
+            <div className="p-7 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/40 transition-all space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+                <Heart className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-black text-lg text-white">Acoustic & Cozy Atmosphere</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Calibrated warm amber 2700K lighting, plush velvet seating, and relaxed lo-fi soundscapes designed for deep focus, creative work, or intimate evening dinners.
+              </p>
+            </div>
+
+            {/* Pillar 6: Pet-Friendly Garden */}
+            <div className="p-7 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-yellow-400/40 transition-all space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+                <Star className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-black text-lg text-white">Pet-Friendly Open Spaces</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Our sun-dappled patio garden features open-air greenery with morning sun, where four-legged companions are always treated as VIPs with fresh water bowls.
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* SECTION 3: Cafe Seating Zones & Atmosphere */}
+      <section id="ambiance" className="py-16 sm:py-24 border-b border-neutral-850">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-wider mb-2">
+              <Layers className="w-3.5 h-3.5" />
+              <span>Curated Spaces</span>
+            </div>
+            <h2 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight">
+              Three Distinct Dining Atmospheres
+            </h2>
+            <p className="text-neutral-400 text-sm mt-2">
+              Whether you are catching up on reading, sharing a meal with friends, or enjoying sunset views.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* Card 1: Lounge */}
+            {/* Zone 1: Lounge */}
             <div className="p-8 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
                 <Coffee className="w-6 h-6" />
               </div>
               <h3 className="font-display font-black text-xl text-white">Indoor Acoustic Lounge</h3>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Designed for productivity and intimate conversations. Plush velvet seating, calibrated warm amber lighting, and charging sockets at every single booth.
+                Designed for productivity and quiet conversations. Velvet booth seating, calibrated warm amber lighting, and charging sockets at every table.
               </p>
               <div className="pt-2 text-[11px] font-bold text-yellow-400 flex items-center gap-1">
-                <span>Tables 1 – 4</span>
+                <span>Tables 01 – 04</span>
               </div>
             </div>
 
-            {/* Card 2: Patio */}
+            {/* Zone 2: Patio */}
             <div className="p-8 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
                 <Heart className="w-6 h-6" />
@@ -702,11 +521,11 @@ export const LandingPage: React.FC = () => {
                 Sun-dappled open-air greenery with fresh morning breezes. Pet-friendly tables perfect for brunch with friends and four-legged companions.
               </p>
               <div className="pt-2 text-[11px] font-bold text-yellow-400 flex items-center gap-1">
-                <span>Tables 5 – 8</span>
+                <span>Tables 05 – 08</span>
               </div>
             </div>
 
-            {/* Card 3: Rooftop */}
+            {/* Zone 3: Rooftop */}
             <div className="p-8 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
                 <Sparkles className="w-6 h-6" />
@@ -716,7 +535,7 @@ export const LandingPage: React.FC = () => {
                 Elevated skyline views beneath warm fairy lights. Evening acoustic playlists, refreshing craft coolers, and starlit sourdough dining.
               </p>
               <div className="pt-2 text-[11px] font-bold text-yellow-400 flex items-center gap-1">
-                <span>Tables 9 – 10</span>
+                <span>Tables 09 – 10</span>
               </div>
             </div>
 
@@ -725,8 +544,8 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 5: Visit, Hours, Wi-Fi & Location */}
-      <section id="visit" className="py-16 sm:py-24 border-b border-neutral-850">
+      {/* SECTION 4: Visit, Opening Hours & Location (Wi-Fi completely removed) */}
+      <section id="visit" className="py-16 sm:py-24 border-b border-neutral-850 bg-neutral-950/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -758,43 +577,24 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* High-Speed Wi-Fi */}
+            {/* Smart Table-Side Dining Experience (Replaces Wi-Fi Card) */}
             <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center font-bold">
-                  <Wifi className="w-5 h-5 stroke-[2.5]" />
+                  <QrCode className="w-5 h-5 stroke-[2.5]" />
                 </div>
                 <div>
-                  <h4 className="font-display font-black text-base text-white">High-Speed 5G Wi-Fi</h4>
-                  <p className="text-xs text-neutral-400">Complimentary For Guests</p>
+                  <h4 className="font-display font-black text-base text-white">Physical QR Dining</h4>
+                  <p className="text-xs text-neutral-400">Tables #01 through #10</p>
                 </div>
               </div>
-              <div className="space-y-2 pt-2 text-xs">
-                <div className="flex justify-between text-neutral-300">
-                  <span>Network (SSID)</span>
-                  <span className="font-mono font-bold text-white">LowkeyCafe_Guest_5G</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-xl bg-black border border-neutral-800">
-                  <div>
-                    <span className="text-[10px] text-neutral-400 block">Password</span>
-                    <span className="font-mono font-bold text-yellow-400 text-xs">lowkeycoffee</span>
-                  </div>
-                  <button
-                    onClick={handleCopyWifi}
-                    className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-[11px] font-bold flex items-center gap-1 transition-colors"
-                  >
-                    {copiedWifi ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-400" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
+              <div className="space-y-2 pt-2 text-xs text-neutral-300">
+                <p className="leading-relaxed">
+                  Every table has its own serial QR code stand pasted on it. Simply scan with any smartphone camera to open your table cart and order with zero waiting.
+                </p>
+                <div className="pt-1 flex items-center gap-2 text-yellow-400 font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Instant Kitchen & Bar Dispatch</span>
                 </div>
               </div>
             </div>
@@ -844,8 +644,11 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 font-bold text-neutral-400">
-            <a href="#dine-in-tables" className="hover:text-yellow-400 transition-colors">Dine-In Tables</a>
-            <a href="#takeaway-qr" className="hover:text-yellow-400 transition-colors">Takeaway QR</a>
+            <a href="#specialities" className="hover:text-yellow-400 transition-colors">Specialities</a>
+            <a href="#why-us" className="hover:text-yellow-400 transition-colors">Why Lowkey</a>
+            <a href="#ambiance" className="hover:text-yellow-400 transition-colors">Ambiance</a>
+            <a href="#visit" className="hover:text-yellow-400 transition-colors">Hours & Location</a>
+            <button onClick={() => navigate('/takeaway')} className="hover:text-yellow-400 transition-colors">Takeaway</button>
             <button onClick={() => navigate('/login')} className="hover:text-yellow-400 transition-colors">Staff Login</button>
             <button onClick={() => navigate('/kds')} className="hover:text-yellow-400 transition-colors">Kitchen Display</button>
             <button onClick={() => navigate('/waiter')} className="hover:text-yellow-400 transition-colors">Floor Waiter</button>
@@ -853,102 +656,6 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
       </footer>
-
-      {/* Universal Interactive QR Modal */}
-      {activeQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-neutral-900 border-2 border-yellow-400 shadow-[0_20px_60px_rgba(250,204,21,0.2)] text-center text-white space-y-4">
-            
-            {/* Close Button */}
-            <button
-              onClick={() => setActiveQrModal(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Modal Title */}
-            <div>
-              <span className="px-3 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider">
-                {activeQrModal.type === 'TAKEAWAY' ? '🥡 Takeaway / Outside QR' : `Table #${activeQrModal.tableNum}`}
-              </span>
-              <h3 className="font-display font-black text-xl text-white mt-2">
-                {activeQrModal.title}
-              </h3>
-              <p className="text-xs text-neutral-400 mt-1">
-                {activeQrModal.subtitle}
-              </p>
-            </div>
-
-            {/* High-Res QR Image */}
-            <div className="p-3 bg-white rounded-2xl border-4 border-yellow-400 shadow-xl inline-block mx-auto">
-              {modalQrDataUrl ? (
-                <img
-                  src={modalQrDataUrl}
-                  alt={activeQrModal.title}
-                  className="w-56 h-56 object-contain"
-                />
-              ) : (
-                <div className="w-56 h-56 flex items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-            </div>
-
-            {/* Target URL Preview & Copy */}
-            <div className="p-2.5 rounded-xl bg-black/60 border border-neutral-800 text-left">
-              <span className="text-[10px] text-neutral-400 block font-semibold mb-0.5">Scannable Mobile Target Link:</span>
-              <a
-                href={getLiveQrUrl(activeQrModal.url)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-mono text-yellow-400 hover:underline break-all flex items-center gap-1"
-              >
-                <span>{getLiveQrUrl(activeQrModal.url)}</span>
-                <ExternalLink className="w-3 h-3 shrink-0" />
-              </a>
-            </div>
-
-            {/* Action Buttons inside Modal */}
-            <div className="space-y-2 pt-1">
-              <button
-                onClick={() => {
-                  navigate(activeQrModal.url);
-                  setActiveQrModal(null);
-                }}
-                className="w-full py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
-              >
-                <span>Directly Open Menu On This Device</span>
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-
-              <button
-                onClick={() => {
-                  downloadQrCode(
-                    activeQrModal.url,
-                    activeQrModal.type === 'TAKEAWAY'
-                      ? 'Lowkey_Cafe_Takeaway_QR.png'
-                      : `Lowkey_Cafe_Table_${activeQrModal.tableNum}_QR.png`
-                  );
-                }}
-                className="w-full py-2 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Download High-Res QR Image (PNG)</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* Built-in Live Camera QR Scanner Modal */}
-      {showCameraScanner && (
-        <CameraQrScanner
-          isOpen={showCameraScanner}
-          onClose={() => setShowCameraScanner(false)}
-        />
-      )}
 
     </div>
   );

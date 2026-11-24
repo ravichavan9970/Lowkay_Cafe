@@ -3,6 +3,7 @@ import { adminApi, tableApi, menuApi } from '../services/api';
 import { Table, FoodItem, Category } from '../types';
 import wsService from '../services/websocket';
 import { generateQrDataUrl, downloadQrCode, getLiveQrUrl } from '../services/qrService';
+import { downloadAllTablesQrPdf, downloadSingleTableQrPdf } from '../services/tableQrPdfService';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -95,6 +96,19 @@ export const AdminDashboard: React.FC = () => {
     typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app'
   );
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
+  const [isDownloadingAllPdf, setIsDownloadingAllPdf] = useState(false);
+
+  const handleDownloadAllSerialQrs = async () => {
+    try {
+      setIsDownloadingAllPdf(true);
+      await downloadAllTablesQrPdf(tables, customQrBaseUrl);
+    } catch (err) {
+      console.error('Failed to generate serial table QR PDF', err);
+      alert('Could not generate PDF. Please try again.');
+    } finally {
+      setIsDownloadingAllPdf(false);
+    }
+  };
 
   // New Food Item Form
   const [newItemName, setNewItemName] = useState('');
@@ -482,6 +496,46 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'tables' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             
+            {/* Physical Serial QR Batch Print & Download Banner */}
+            <div className="bg-gradient-to-r from-stone-900 via-neutral-950 to-stone-900 border-2 border-yellow-400/70 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-yellow-400/10 blur-[100px] pointer-events-none rounded-full"></div>
+              
+              <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 text-xs font-black uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Physical Table Stands · Serial Batch (1 to {tables.length || 10})</span>
+                  </div>
+                  <h3 className="font-display font-black text-xl sm:text-2xl text-white">
+                    Download All Table QRs Serially (Print Ready)
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+                    Generate and download a print-ready multi-page PDF formatted serially for <strong>Table #01 to #{tables.length < 10 ? '0' + tables.length : tables.length}</strong>. Each page includes the <strong>Lowkey Cafe logo</strong>, <strong>Cafe Name</strong>, <strong>Table Number</strong>, <strong>"Scan with phone camera to order" instruction message</strong>, and a <strong>high-contrast scannable QR code</strong> ready for physical table stands.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-yellow-300 font-semibold">
+                    <span className="flex items-center gap-1">✓ Lowkey Cafe Logo & Title</span>
+                    <span className="flex items-center gap-1">✓ Serial Order (Tables 1 to {tables.length || 10})</span>
+                    <span className="flex items-center gap-1">✓ Clear Scan Instructions</span>
+                    <span className="flex items-center gap-1">✓ Instant Mobile Scannable</span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 flex flex-col gap-2 w-full lg:w-auto">
+                  <button
+                    onClick={handleDownloadAllSerialQrs}
+                    disabled={isDownloadingAllPdf || tables.length === 0}
+                    className="px-6 py-4 rounded-2xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-yellow-400/25 active:scale-95 transition-all"
+                  >
+                    <Download className={`w-4 h-4 stroke-[2.5] ${isDownloadingAllPdf ? 'animate-bounce' : ''}`} />
+                    <span>{isDownloadingAllPdf ? 'Generating Serial QRs PDF...' : 'Download All Table QRs Serially (PDF)'}</span>
+                  </button>
+                  <p className="text-[11px] text-neutral-400 text-center lg:text-right font-medium">
+                    A5 Sheets · Ready for acrylic stands
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             {/* Mobile Scanner Wi-Fi QR Configuration Card */}
             <div className="bg-gradient-to-r from-amber-500/10 via-brand-500/5 to-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-6 shadow-sm">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -632,7 +686,7 @@ export const AdminDashboard: React.FC = () => {
                         download={`Table_${table.tableNumber}_QR.png`}
                         className="py-1.5 px-2 bg-stone-100 hover:bg-stone-200 rounded-lg text-[10px] font-bold text-stone-700 flex items-center justify-center gap-1"
                       >
-                        <Download className="w-3 h-3" /> Save
+                        <Download className="w-3 h-3" /> Save PNG
                       </a>
                     )}
                     <button
@@ -640,6 +694,13 @@ export const AdminDashboard: React.FC = () => {
                       className="py-1.5 px-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1"
                     >
                       <Printer className="w-3 h-3" /> Badge
+                    </button>
+                    <button
+                      onClick={() => downloadSingleTableQrPdf(table, customQrBaseUrl)}
+                      className="col-span-2 py-1.5 px-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black rounded-lg text-[10px] flex items-center justify-center gap-1 shadow-sm transition-colors"
+                      title="Download print-ready A5 sheet PDF for this table"
+                    >
+                      <Download className="w-3 h-3 stroke-[2.5]" /> Download PDF Sheet
                     </button>
                     <button
                       onClick={() => handleRegenerateSingle(table.tableNumber)}
@@ -1039,12 +1100,20 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => window.print()}
-              className="w-full mt-4 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
-            >
-              <Printer className="w-4 h-4" /> Print Badge
-            </button>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button
+                onClick={() => downloadSingleTableQrPdf(selectedQrTable, customQrBaseUrl)}
+                className="py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm transition-all"
+              >
+                <Download className="w-4 h-4 stroke-[2.5]" /> Download PDF
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" /> Print Badge
+              </button>
+            </div>
           </div>
         </div>
       )}
