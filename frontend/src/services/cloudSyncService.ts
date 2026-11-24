@@ -77,7 +77,7 @@ class CloudSyncService {
     if (typeof window !== 'undefined') {
       try {
         if ('BroadcastChannel' in window) {
-          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v5');
+          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v8');
           this.broadcastChannel.onmessage = (e) => {
             const data = e.data;
             if (!data) return;
@@ -370,7 +370,7 @@ class CloudSyncService {
       } else {
         const existing = this.ordersMap.get(numId);
         const updated = existing ? { ...existing, status: evt.status, ...(evt.order || {}) } : (evt.order || null);
-        if (updated) {
+        if (updated && !DISMISSED_ORDER_CODES.has(updated.orderCode) && !this.dismissedOrderIds.has(numId)) {
           this.ordersMap.set(numId, updated);
           try {
             const raw = localStorage.getItem('lowkey_demo_orders');
