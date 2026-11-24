@@ -138,7 +138,11 @@ export const WaiterDashboard: React.FC = () => {
     try {
       const bill = await cloudSync.getBillForOrder(orderId);
       await billingApi.recordCashPayment({ billId: bill.id, tipAmount: 0 });
-      await kitchenApi.updateOrderStatus(orderId, 'COMPLETED');
+      const orders = await cloudSync.getOrders();
+      const order = orders.find((o) => Number(o.id) === Number(orderId));
+      if (order && (order.status === 'READY' || order.status === 'SERVED')) {
+        await kitchenApi.updateOrderStatus(orderId, 'COMPLETED');
+      }
       loadFloor();
     } catch (e) {
       console.error(e);

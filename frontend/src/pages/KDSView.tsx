@@ -60,10 +60,10 @@ export const KDSView: React.FC = () => {
   useEffect(() => {
     loadData();
 
-    // 1. Resilient auto-polling every 4s (ensures mobile takeaway & table orders appear immediately)
+    // 1. Fallback background sync (12s relaxed interval; real-time updates come via SSE & BroadcastChannel)
     const pollId = setInterval(() => {
       loadData();
-    }, 4000);
+    }, 12000);
 
     // 2. Local instant update listener (0ms latency across same-device tabs)
     const handleLocalOrder = (e: any) => {

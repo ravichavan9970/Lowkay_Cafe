@@ -24,7 +24,6 @@ import {
   Flame,
   ArrowRight,
   Loader2,
-  Sparkles,
   Download,
 } from 'lucide-react';
 
@@ -76,25 +75,20 @@ export const OrderTracking: React.FC = () => {
   useEffect(() => {
     fetchOrder();
 
-    // 1. Live auto-polling from cloud (syncs across Kitchen KDS and customer's mobile phone)
+    // 1. Refresh on tab focus (instant mobile refresh when returning to screen)
+    const handleFocus = () => {
+      fetchOrder();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // 2. Fallback heartbeat (20s relaxed interval to prevent any broker 429 rate limit)
     const pollId = setInterval(() => {
       if (orderCode) {
-        orderApi.trackOrder(orderCode)
-          .then((res) => {
-            if (res.data) {
-              setOrder(res.data);
-              if (res.data.id) {
-                billingApi.getBillForOrder(res.data.id)
-                  .then((bRes) => setBill(bRes.data))
-                  .catch(() => {});
-              }
-            }
-          })
-          .catch(() => {});
+        fetchOrder();
       }
-    }, 3000);
+    }, 20000);
 
-    // 2. Real-time cloud subscription (instant cross-device SSE sync)
+    // 3. Real-time cloud subscription (instant cross-device SSE sync)
     const unsubCloud = cloudSync.subscribeToOrders((orders) => {
       const match = orders.find((o) => o.orderCode === orderCode);
       if (match) {
@@ -105,7 +99,7 @@ export const OrderTracking: React.FC = () => {
       }
     });
 
-    // 3. Subscribe to live WebSocket updates for this specific order
+    // 4. Subscribe to live WebSocket updates for this specific order
     const subId = wsService.subscribe(`/topic/orders/${orderCode}`, (updatedOrder: Order) => {
       console.log('⚡ Live Order Update received via WebSocket:', updatedOrder);
       setOrder(updatedOrder);
@@ -116,7 +110,7 @@ export const OrderTracking: React.FC = () => {
       }
     });
 
-    // 4. Instant local synchronization across tabs and windows (0ms latency)
+    // 5. Instant local synchronization across tabs and windows (0ms latency)
     const handleOrderSync = (e: any) => {
       const updated = e.detail;
       if (updated && updated.orderCode === orderCode) {
@@ -137,36 +131,13 @@ export const OrderTracking: React.FC = () => {
 
     return () => {
       clearInterval(pollId);
+      window.removeEventListener('focus', handleFocus);
       unsubCloud();
       wsService.unsubscribe(subId);
       window.removeEventListener('lowkey_order_update', handleOrderSync);
       window.removeEventListener('lowkey_bill_update', handleBillSync);
     };
   }, [orderCode, order?.id]);
-
-  // Fast-forward next status for demo simulation
-  const handleFastForwardStatus = async () => {
-    if (!order) return;
-    let nextStatus: OrderStatus = 'READY';
-    if (order.status === 'NEW_ORDER' || order.status === 'ACCEPTED') {
-      nextStatus = 'PREPARING';
-    } else if (order.status === 'PREPARING') {
-      nextStatus = 'READY';
-    } else if (order.status === 'READY') {
-      nextStatus = 'SERVED';
-    } else if (order.status === 'SERVED') {
-      nextStatus = 'COMPLETED';
-    }
-
-    try {
-      const res = await kitchenApi.updateOrderStatus(order.id, nextStatus);
-      if (res.data) {
-        setOrder(res.data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   if (loading) {
     return (
@@ -276,24 +247,9 @@ export const OrderTracking: React.FC = () => {
               )}
             </div>
 
-            {/* Quick Actions (Fast forward demo and Call Waiter) */}
-            {!isCompleted && !isCancelled && (
+            {/* Quick Actions (Call Waiter only for Dine-in tables; customer cannot advance status) */}
+            {!isCompleted && !isCancelled && !isTakeaway && (
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleFastForwardStatus}
-                  className="px-3.5 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
-                  title="Simulate next kitchen step"
-                >
-                  <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>
-                    {order.status === 'PREPARING'
-                      ? (isTakeaway ? 'Mark Ready for Pickup' : 'Mark Food Ready')
-                      : order.status === 'READY'
-                      ? (isTakeaway ? 'Mark Collected' : 'Mark as Served')
-                      : 'Advance Status'}
-                  </span>
-                </button>
-
                 <button
                   onClick={() => setShowCallWaiter(true)}
                   className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold flex items-center gap-1.5 border border-neutral-700 transition-colors active:scale-95"

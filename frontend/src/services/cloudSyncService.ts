@@ -3,13 +3,14 @@ import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
 // High-speed, unblocked community brokers with global access & SSE
 const CLOUD_BROKERS = [
+  'https://ntfy.projectsegfau.lt',
+  'https://ntfy.adminforge.de',
   'https://ntfy.envs.net',
   'https://ntfy.tedomum.fr',
-  'https://ntfy.adminforge.de',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
-const ORDERS_TOPIC = 'lowkey_cafe_orders_v4';
-const WAITER_TOPIC = 'lowkey_cafe_waiter_v4';
+const ORDERS_TOPIC = 'lowkey_cafe_orders_v5';
+const WAITER_TOPIC = 'lowkey_cafe_waiter_v5';
 const DISMISSED_ORDER_CODES = new Set(['ORD-556609', 'ORD-397384', 'ORD-255965']);
 
 interface OrderEvent {
@@ -43,6 +44,11 @@ class CloudSyncService {
   private waiterPollTimer: any = null;
   private broadcastChannel: BroadcastChannel | null = null;
 
+  private lastOrdersFetchTime: number = 0;
+  private lastWaiterFetchTime: number = 0;
+  private isFetchingOrders: boolean = false;
+  private isFetchingWaiter: boolean = false;
+
   constructor() {
     this.initResolvedIds();
     this.initDismissedOrderIds();
@@ -53,7 +59,7 @@ class CloudSyncService {
     if (typeof window !== 'undefined') {
       try {
         if ('BroadcastChannel' in window) {
-          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v4');
+          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v5');
           this.broadcastChannel.onmessage = (e) => {
             const data = e.data;
             if (!data) return;
@@ -215,8 +221,9 @@ class CloudSyncService {
 
   /**
    * Fetches all orders by combining ntfy message history with local cache and initial mocks.
+   * Throttled to prevent 429 rate limits across tabs and views.
    */
-  async getOrders(): Promise<Order[]> {
+  async getOrders(force = false): Promise<Order[]> {
     // 1. Seed with mock orders and local cache
     const localRaw = localStorage.getItem('lowkey_demo_orders');
     const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
@@ -231,6 +238,23 @@ class CloudSyncService {
       this.ordersMap.set(o.id, o);
     });
 
+    const now = Date.now();
+    // Return cached orders immediately if fetched within the last 8 seconds unless forced
+    if (!force && this.lastOrdersFetchTime > 0 && now - this.lastOrdersFetchTime < 8000) {
+      return Array.from(this.ordersMap.values())
+        .filter((o) => !this.dismissedOrderIds.has(Number(o.id)) && !DISMISSED_ORDER_CODES.has(o.orderCode))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    if (this.isFetchingOrders) {
+      return Array.from(this.ordersMap.values())
+        .filter((o) => !this.dismissedOrderIds.has(Number(o.id)) && !DISMISSED_ORDER_CODES.has(o.orderCode))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    this.isFetchingOrders = true;
+    this.lastOrdersFetchTime = now;
+
     // 2. Poll past messages from cloud pubsub (last 12h so shift orders persist)
     for (const broker of CLOUD_BROKERS) {
       try {
@@ -238,7 +262,7 @@ class CloudSyncService {
         let timer: any = null;
         if (typeof AbortController !== 'undefined') {
           const controller = new AbortController();
-          timer = setTimeout(() => controller.abort(), 2000);
+          timer = setTimeout(() => controller.abort(), 2500);
           signal = controller.signal;
         }
         const res = await fetch(`${broker}/${ORDERS_TOPIC}/json?poll=1&since=12h`, {
@@ -262,12 +286,14 @@ class CloudSyncService {
               // Ignore corrupted lines
             }
           }
-          break; // Successfully loaded
+          break; // Successfully loaded from this broker
         }
       } catch (err) {
         // Try fallback broker
       }
     }
+
+    this.isFetchingOrders = false;
 
     const merged = Array.from(this.ordersMap.values())
       .filter((o) => !this.dismissedOrderIds.has(Number(o.id)) && !DISMISSED_ORDER_CODES.has(o.orderCode))
@@ -296,7 +322,9 @@ class CloudSyncService {
       } else {
         const existing = this.ordersMap.get(numId);
         if (existing) {
-          this.ordersMap.set(numId, { ...existing, status: evt.status });
+          this.ordersMap.set(numId, { ...existing, status: evt.status, ...(evt.order || {}) });
+        } else if (evt.order) {
+          this.ordersMap.set(numId, { ...evt.order, status: evt.status });
         }
       }
     } else if (evt.action === 'RECORD_PAYMENT' && evt.orderId) {
@@ -378,65 +406,50 @@ class CloudSyncService {
    * Updates an order's status and broadcasts to all listening screens.
    */
   async updateOrderStatus(orderId: number, status: OrderStatus, _reason?: string): Promise<Order | null> {
-    let order = this.ordersMap.get(orderId);
+    const numId = Number(orderId);
+    let order = this.ordersMap.get(numId);
     if (!order) {
       const orders = await this.getOrders();
-      order = orders.find((o) => o.id === orderId);
+      order = orders.find((o) => Number(o.id) === numId);
     }
 
     const updatedOrder: Order = order
       ? { ...order, status }
       : {
-          id: orderId,
-          orderCode: `ORD-${orderId}`,
-          tableNumber: 4,
-          customerName: 'Aarav Sharma',
+          id: numId,
+          orderCode: `ORD-${numId}`,
+          tableNumber: 0,
+          customerName: 'Takeaway Customer',
           customerPhone: '+91 98765 43210',
           status,
-          subtotal: 748,
-          taxAmount: 37.4,
-          serviceCharge: 37.4,
+          subtotal: 249,
+          taxAmount: 12.45,
+          serviceCharge: 0,
           discountAmount: 0,
-          grandTotal: 822.8,
+          grandTotal: 261.45,
           estimatedPrepMinutes: 12,
           createdAt: new Date().toISOString(),
-          items: [
-            {
-              id: 1,
-              foodItemId: 1,
-              foodItemName: 'Truffle Parmesan Fries',
-              foodItemImage: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80',
-              categoryName: 'Starters',
-              quantity: 1,
-              unitPrice: 249,
-              subtotal: 249,
-              selectedPortion: 'Full',
-              selectedSpiceLevel: 'MILD',
-              status,
-              stationId: 1,
-              customizations: [],
-            },
-          ],
+          items: [],
         };
 
     if (!Array.isArray(updatedOrder.items)) {
       updatedOrder.items = [];
     }
 
-    this.ordersMap.set(orderId, updatedOrder);
+    this.ordersMap.set(numId, updatedOrder);
 
     // Save locally
     const localRaw = localStorage.getItem('lowkey_demo_orders');
     const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
-    const nextLocal = localOrders.map((o) => (o.id === orderId ? updatedOrder : o));
+    const nextLocal = [updatedOrder, ...localOrders.filter((o) => Number(o.id) !== numId)];
     localStorage.setItem('lowkey_demo_orders', JSON.stringify(nextLocal));
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: updatedOrder }));
     }
 
-    // Publish to cloud (non-blocking fire-and-forget)
-    const event: OrderEvent = { action: 'UPDATE_STATUS', orderId, status };
+    // Publish to cloud with full updated order data (non-blocking fire-and-forget)
+    const event: OrderEvent = { action: 'UPDATE_STATUS', orderId: numId, status, order: updatedOrder };
     this.broadcastToTabs('ORDER_EVENT', event);
     this.publishToCloud(ORDERS_TOPIC, event, `Order #${updatedOrder.orderCode} -> ${status}`);
 
@@ -481,16 +494,16 @@ class CloudSyncService {
       }
     }
 
-    // Active resilient polling every 5 seconds to guarantee cross-device sync
+    // Relaxed resilient polling (25 seconds) to prevent 429 broker limits while guaranteeing sync
     if (!this.ordersPollTimer) {
       this.ordersPollTimer = setInterval(async () => {
         try {
-          const fresh = await this.getOrders();
+          const fresh = await this.getOrders(true);
           this.notifyOrderListeners(fresh);
         } catch (e) {
           // ignore network glitch
         }
-      }, 5000);
+      }, 25000);
     }
 
     return () => {
@@ -518,9 +531,36 @@ class CloudSyncService {
   }
 
   async getOrderByCode(orderCode: string): Promise<Order | null> {
+    const cleanCode = (orderCode || '').trim().toUpperCase();
+    if (!cleanCode) return null;
+
+    // 1. Instant check in-memory map (0ms)
+    for (const order of this.ordersMap.values()) {
+      if (order.orderCode && order.orderCode.trim().toUpperCase() === cleanCode) {
+        return order;
+      }
+    }
+
+    // 2. Instant check localStorage (0ms)
+    try {
+      const localRaw = localStorage.getItem('lowkey_demo_orders');
+      if (localRaw) {
+        const localOrders: Order[] = JSON.parse(localRaw);
+        if (Array.isArray(localOrders)) {
+          const match = localOrders.find((o) => o.orderCode && o.orderCode.trim().toUpperCase() === cleanCode);
+          if (match) {
+            this.ordersMap.set(Number(match.id), match);
+            return match;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Fallback to network query
     const orders = await this.getOrders();
-    const found = orders.find((o) => o.orderCode === orderCode);
+    const found = orders.find((o) => o.orderCode && o.orderCode.trim().toUpperCase() === cleanCode);
     if (found) return found;
+
     return MOCK_ORDERS.find((o) => o.orderCode === orderCode) || null;
   }
 
@@ -719,8 +759,9 @@ class CloudSyncService {
 
   /**
    * Fetches active waiter requests, filtering out all resolved requests so they NEVER repeat.
+   * Throttled to prevent 429 rate limits.
    */
-  async getWaiterRequests(): Promise<WaiterRequest[]> {
+  async getWaiterRequests(force = false): Promise<WaiterRequest[]> {
     // 1. Seed with mocks if not yet resolved
     MOCK_WAITER_REQUESTS.forEach((r) => {
       if (!this.resolvedWaiterIds.has(r.id) && !this.waiterRequestsMap.has(r.id)) {
@@ -744,6 +785,22 @@ class CloudSyncService {
     } catch (e) {
       console.warn('Failed to parse local waiter requests', e);
     }
+
+    const now = Date.now();
+    if (!force && this.lastWaiterFetchTime > 0 && now - this.lastWaiterFetchTime < 8000) {
+      return Array.from(this.waiterRequestsMap.values())
+        .filter((r) => !this.resolvedWaiterIds.has(r.id) && r.status !== 'RESOLVED')
+        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    }
+
+    if (this.isFetchingWaiter) {
+      return Array.from(this.waiterRequestsMap.values())
+        .filter((r) => !this.resolvedWaiterIds.has(r.id) && r.status !== 'RESOLVED')
+        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    }
+
+    this.isFetchingWaiter = true;
+    this.lastWaiterFetchTime = now;
 
     // 3. Poll past messages from cloud store (last 12h)
     for (const broker of CLOUD_BROKERS) {
@@ -782,6 +839,8 @@ class CloudSyncService {
         // Try fallback broker
       }
     }
+
+    this.isFetchingWaiter = false;
 
     const activeList = Array.from(this.waiterRequestsMap.values())
       .filter((r) => !this.resolvedWaiterIds.has(r.id) && r.status !== 'RESOLVED')
