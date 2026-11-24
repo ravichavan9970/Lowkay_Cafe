@@ -36,6 +36,14 @@ const STATUS_STEPS: { status: OrderStatus; label: string; desc: string; icon: an
   { status: 'SERVED', label: 'Served at Table', desc: 'Bon appétit! Enjoy your meal', icon: CheckCircle2 },
 ];
 
+const TAKEAWAY_STATUS_STEPS: { status: OrderStatus; label: string; desc: string; icon: any }[] = [
+  { status: 'NEW_ORDER', label: 'Order Received', desc: 'Sent straight to the kitchen line', icon: Clock },
+  { status: 'ACCEPTED', label: 'Order Confirmed', desc: 'Kitchen acknowledged takeaway ticket', icon: CheckCircle2 },
+  { status: 'PREPARING', label: 'Preparing Food', desc: 'Chef is crafting your takeaway', icon: ChefHat },
+  { status: 'READY', label: 'Ready for Pickup', desc: 'Packed and waiting at the counter', icon: Bell },
+  { status: 'SERVED', label: 'Order Collected', desc: 'Handed over! Enjoy your meal', icon: CheckCircle2 },
+];
+
 export const OrderTracking: React.FC = () => {
   const { orderCode } = useParams<{ orderCode: string }>();
 
@@ -108,12 +116,33 @@ export const OrderTracking: React.FC = () => {
       }
     });
 
+    // 4. Instant local synchronization across tabs and windows (0ms latency)
+    const handleOrderSync = (e: any) => {
+      const updated = e.detail;
+      if (updated && updated.orderCode === orderCode) {
+        setOrder(updated);
+        if (updated.id) {
+          billingApi.getBillForOrder(updated.id).then((bRes) => setBill(bRes.data)).catch(() => {});
+        }
+      }
+    };
+    const handleBillSync = (e: any) => {
+      const updatedBill = e.detail;
+      if (updatedBill && (updatedBill.orderCode === orderCode || (order && updatedBill.orderId === order.id))) {
+        setBill(updatedBill);
+      }
+    };
+    window.addEventListener('lowkey_order_update', handleOrderSync);
+    window.addEventListener('lowkey_bill_update', handleBillSync);
+
     return () => {
       clearInterval(pollId);
       unsubCloud();
       wsService.unsubscribe(subId);
+      window.removeEventListener('lowkey_order_update', handleOrderSync);
+      window.removeEventListener('lowkey_bill_update', handleBillSync);
     };
-  }, [orderCode]);
+  }, [orderCode, order?.id]);
 
   // Fast-forward next status for demo simulation
   const handleFastForwardStatus = async () => {
@@ -179,9 +208,11 @@ export const OrderTracking: React.FC = () => {
     );
   }
 
-  // Determine current step index
-  const currentStepIdx = STATUS_STEPS.findIndex((s) => s.status === order.status);
-  const isCompleted = order.status === 'COMPLETED' || (bill && bill.status === 'PAID');
+  // Determine takeaway vs dine-in stepper and status
+  const isTakeaway = order.tableNumber === 0;
+  const statusSteps = isTakeaway ? TAKEAWAY_STATUS_STEPS : STATUS_STEPS;
+  const currentStepIdx = statusSteps.findIndex((s) => s.status === order.status);
+  const isCompleted = order.status === 'COMPLETED' || order.status === 'SERVED' || (bill && bill.status === 'PAID');
   const isCancelled = order.status === 'CANCELLED';
 
   return (
@@ -221,7 +252,7 @@ export const OrderTracking: React.FC = () => {
                 {isCompleted ? (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
-                    <span>Dining Complete</span>
+                    <span>{isTakeaway ? 'Takeaway Picked Up' : 'Dining Complete'}</span>
                   </>
                 ) : (
                   <>
@@ -234,16 +265,18 @@ export const OrderTracking: React.FC = () => {
                 {isCancelled
                   ? 'Order Cancelled'
                   : isCompleted
-                  ? 'Dining Completed'
+                  ? (isTakeaway ? 'Takeaway Picked Up' : 'Dining Completed')
                   : order.status === 'READY'
-                  ? 'Your Food is Ready!'
+                  ? (isTakeaway ? 'Ready for Pickup!' : 'Your Food is Ready!')
                   : order.status === 'PREPARING'
                   ? 'Cooking Your Meal'
                   : 'Order Confirmed'}
               </h1>
               {isCompleted ? (
                 <p className="text-xs sm:text-sm text-neutral-300 mt-1">
-                  All dishes served & dining settled. Thank you for dining with Lowkey Cafe!
+                  {isTakeaway
+                    ? 'Takeaway order packed & handed over. Thank you for dining with Lowkey Cafe!'
+                    : 'All dishes served & dining settled. Thank you for dining with Lowkey Cafe!'}
                 </p>
               ) : (
                 <p className="text-xs sm:text-sm text-neutral-400 mt-1">
@@ -263,9 +296,9 @@ export const OrderTracking: React.FC = () => {
                   <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>
                     {order.status === 'PREPARING'
-                      ? 'Mark Food Ready'
+                      ? (isTakeaway ? 'Mark Ready for Pickup' : 'Mark Food Ready')
                       : order.status === 'READY'
-                      ? 'Mark as Served'
+                      ? (isTakeaway ? 'Mark Collected' : 'Mark as Served')
                       : 'Advance Status'}
                   </span>
                 </button>
@@ -293,12 +326,12 @@ export const OrderTracking: React.FC = () => {
                     style={{
                       width: isCompleted
                         ? '100%'
-                        : `${Math.max(0, (currentStepIdx / (STATUS_STEPS.length - 1)) * 100)}%`,
+                        : `${Math.max(0, (currentStepIdx / (statusSteps.length - 1)) * 100)}%`,
                     }}
                   ></div>
                 </div>
 
-                {STATUS_STEPS.map((step, idx) => {
+                {statusSteps.map((step, idx) => {
                   const Icon = step.icon;
                   const isDone = isCompleted || currentStepIdx >= idx;
                   const isCurrent = currentStepIdx === idx && !isCompleted;
@@ -400,7 +433,7 @@ export const OrderTracking: React.FC = () => {
               <span className="text-neutral-200">₹{order.taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Service Charge (5%)</span>
+              <span>Service Charge {isTakeaway ? '(0% Takeaway)' : '(5%)'}</span>
               <span className="text-neutral-200">₹{order.serviceCharge.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-base font-extrabold text-white pt-2.5 border-t border-neutral-800">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { waiterApi, tableApi, billingApi, kitchenApi } from '../services/api';
 import { cloudSync } from '../services/cloudSyncService';
-import { Table, WaiterRequest, Bill } from '../types';
+import { Table, WaiterRequest, Bill, Order } from '../types';
 import wsService from '../services/websocket';
 import { Link } from 'react-router-dom';
 import {
@@ -21,15 +21,17 @@ import {
   MessageSquare,
   ChefHat,
   Trash2,
+  ShoppingBag,
 } from 'lucide-react';
 
 export const WaiterDashboard: React.FC = () => {
   const [tables, setTables] = useState<Table[]>([]);
+  const [takeawayOrders, setTakeawayOrders] = useState<Order[]>([]);
   const [requests, setRequests] = useState<WaiterRequest[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [tableBill, setTableBill] = useState<Bill | null>(null);
 
-  // Load floor tables and assistance requests
+  // Load floor tables, takeaway orders, and assistance requests
   const loadFloor = () => {
     tableApi.getTables().then((res) => {
       const list = Array.isArray(res.data) ? res.data : [];
@@ -39,9 +41,17 @@ export const WaiterDashboard: React.FC = () => {
         return list.find((t) => t.tableNumber === curr.tableNumber) || curr;
       });
     }).catch(console.error);
+
     waiterApi.getRequests().then((res) => {
       const activeList = Array.isArray(res.data) ? res.data.filter((r) => r.status !== 'RESOLVED') : [];
       setRequests(activeList);
+    }).catch(console.error);
+
+    cloudSync.getOrders().then((allOrders) => {
+      const activeTakeaways = (allOrders || []).filter(
+        (o) => (o.tableNumber === 0 || !o.tableNumber) && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+      );
+      setTakeawayOrders(activeTakeaways);
     }).catch(console.error);
   };
 
@@ -84,12 +94,18 @@ export const WaiterDashboard: React.FC = () => {
     };
     window.addEventListener('lowkey_waiter_update', handleSync);
 
-    // 4. Subscribe to table floor updates
+    // 4. Event listener for local order updates (instant cross-tab sync)
+    const handleLocalOrder = () => {
+      loadFloor();
+    };
+    window.addEventListener('lowkey_order_update', handleLocalOrder);
+
+    // 5. Subscribe to table floor updates
     const subTables = wsService.subscribe('/topic/tables', (updatedTable: Table) => {
       setTables((prev) => prev.map((t) => (t.id === updatedTable.id ? updatedTable : t)));
     });
 
-    // 5. Subscribe to incoming waiter requests via websocket
+    // 6. Subscribe to incoming waiter requests via websocket
     const subRequests = wsService.subscribe('/topic/waiter-requests', (newOrUpdatedReq: WaiterRequest) => {
       setRequests((prev) => {
         if (newOrUpdatedReq.status === 'RESOLVED') {
@@ -111,10 +127,32 @@ export const WaiterDashboard: React.FC = () => {
       unsubOrders();
       unsubWaiter();
       window.removeEventListener('lowkey_waiter_update', handleSync);
+      window.removeEventListener('lowkey_order_update', handleLocalOrder);
       wsService.unsubscribe(subTables);
       wsService.unsubscribe(subRequests);
     };
   }, []);
+
+  // Takeaway handlers
+  const handleSettleTakeaway = async (orderId: number) => {
+    try {
+      const bill = await cloudSync.getBillForOrder(orderId);
+      await billingApi.recordCashPayment({ billId: bill.id, tipAmount: 0 });
+      await kitchenApi.updateOrderStatus(orderId, 'COMPLETED');
+      loadFloor();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleHandoverTakeaway = async (orderId: number) => {
+    try {
+      await kitchenApi.updateOrderStatus(orderId, 'COMPLETED');
+      loadFloor();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Advance order status from table inspection drawer
   const handleAdvanceTableOrder = async (orderId: number, status: 'READY' | 'SERVED') => {
@@ -281,8 +319,94 @@ export const WaiterDashboard: React.FC = () => {
       {/* Main Grid: Floor View (Left) & Live Feed (Right) */}
       <main className="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left 2 Cols: Floor Map */}
+        {/* Left 2 Cols: Floor Map & Takeaway Counter */}
         <div className="lg:col-span-2 space-y-4">
+          
+          {/* Takeaway & Pickup Counter Bar */}
+          <div className="bg-stone-900/80 backdrop-blur-md p-5 rounded-3xl border border-stone-800 shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-yellow-400/20 text-yellow-400 flex items-center justify-center font-bold border border-yellow-400/30">
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-display font-extrabold text-base text-white">
+                    Takeaway & Pickup Counter
+                  </h3>
+                  <p className="text-xs text-stone-400">
+                    {takeawayOrders.length} active takeaway orders awaiting prep or pickup
+                  </p>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                takeawayOrders.length > 0
+                  ? 'bg-yellow-400 text-black shadow-sm shadow-yellow-400/30'
+                  : 'bg-stone-800 text-stone-400 border border-stone-700'
+              }`}>
+                {takeawayOrders.length} In Queue
+              </span>
+            </div>
+
+            {takeawayOrders.length === 0 ? (
+              <div className="py-3 text-center bg-stone-950/50 rounded-2xl border border-stone-800/80 text-xs text-stone-400">
+                No active takeaway tickets. All takeaway orders have been collected!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                {takeawayOrders.map((o) => (
+                  <div
+                    key={o.id}
+                    className="p-4 rounded-2xl bg-stone-950/70 border border-yellow-400/30 flex flex-col justify-between gap-3 shadow-md"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-black text-yellow-400 px-2 py-0.5 rounded bg-yellow-400/15 border border-yellow-400/30">
+                            {o.orderCode}
+                          </span>
+                          <span className="text-xs font-bold text-white">
+                            {o.customerName || 'Takeaway Diner'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-stone-400 mt-1">
+                          {o.items.map((i) => `${i.foodItemName} x${i.quantity}`).join(', ')}
+                        </p>
+                      </div>
+                      <span className="font-mono font-black text-xs text-yellow-400">
+                        ₹{o.grandTotal.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-800/80">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        o.status === 'READY'
+                          ? 'bg-yellow-400 text-black animate-pulse'
+                          : 'bg-orange-500/20 text-orange-400 border border-orange-500/40'
+                      }`}>
+                        {o.status === 'READY' ? 'Ready for Pickup' : o.status}
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleSettleTakeaway(o.id)}
+                          className="px-2.5 py-1 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-[11px] font-bold border border-stone-700 transition-colors"
+                        >
+                          Collect Cash
+                        </button>
+                        <button
+                          onClick={() => handleHandoverTakeaway(o.id)}
+                          className="px-2.5 py-1 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-[11px] font-black transition-all"
+                        >
+                          Hand Over
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="bg-stone-900/80 backdrop-blur-md p-5 rounded-3xl border border-stone-800 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>

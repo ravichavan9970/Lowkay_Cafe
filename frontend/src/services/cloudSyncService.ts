@@ -3,12 +3,13 @@ import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
 // High-speed, unblocked community brokers with global access & SSE
 const CLOUD_BROKERS = [
+  'https://ntfy.envs.net',
   'https://ntfy.tedomum.fr',
   'https://ntfy.adminforge.de',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
-const ORDERS_TOPIC = 'lowkey_cafe_orders_v2';
-const WAITER_TOPIC = 'lowkey_cafe_waiter_v2';
+const ORDERS_TOPIC = 'lowkey_cafe_orders_v3';
+const WAITER_TOPIC = 'lowkey_cafe_waiter_v3';
 
 interface OrderEvent {
   action: 'CREATE' | 'UPDATE_STATUS' | 'RECORD_PAYMENT';
@@ -49,7 +50,7 @@ class CloudSyncService {
     if (typeof window !== 'undefined') {
       try {
         if ('BroadcastChannel' in window) {
-          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v2');
+          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v3');
           this.broadcastChannel.onmessage = (e) => {
             const data = e.data;
             if (!data) return;
@@ -105,7 +106,6 @@ class CloudSyncService {
         fetch(`${broker}/${topic}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             ...(title ? { Title: title } : {}),
           },
           body: jsonBody,
@@ -181,7 +181,7 @@ class CloudSyncService {
       this.ordersMap.set(o.id, o);
     });
 
-    // 2. Poll past messages from cloud pubsub (last 15m)
+    // 2. Poll past messages from cloud pubsub (last 12h so shift orders persist)
     for (const broker of CLOUD_BROKERS) {
       try {
         let signal: AbortSignal | undefined;
@@ -191,7 +191,7 @@ class CloudSyncService {
           timer = setTimeout(() => controller.abort(), 2000);
           signal = controller.signal;
         }
-        const res = await fetch(`${broker}/${ORDERS_TOPIC}/json?poll=1&since=15m`, {
+        const res = await fetch(`${broker}/${ORDERS_TOPIC}/json?poll=1&since=12h`, {
           headers: { 'Cache-Control': 'no-cache' },
           signal,
         });
@@ -249,19 +249,56 @@ class CloudSyncService {
   }
 
   /**
-   * Saves a new order, saves to localStorage, dispatches local event, and broadcasts to cloud.
+   * Saves a new order, creates initial bill, saves to localStorage, dispatches local event, and broadcasts to cloud.
    */
   async createOrder(newOrder: Order): Promise<Order> {
     this.ordersMap.set(newOrder.id, newOrder);
 
-    // Save locally
+    // Save order locally
     const localRaw = localStorage.getItem('lowkey_demo_orders');
     const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
     const updatedLocal = [newOrder, ...localOrders.filter((o) => o.id !== newOrder.id)];
     localStorage.setItem('lowkey_demo_orders', JSON.stringify(updatedLocal));
 
+    // Auto-generate and save initial Bill so takeaway & dine-in bills are always immediately available
+    const initialBill: Bill = {
+      id: newOrder.id,
+      billNumber: `BILL-${newOrder.orderCode.replace('ORD-', '')}`,
+      orderId: newOrder.id,
+      orderCode: newOrder.orderCode,
+      tableNumber: newOrder.tableNumber,
+      subtotal: newOrder.subtotal,
+      taxAmount: newOrder.taxAmount,
+      serviceCharge: newOrder.serviceCharge,
+      discountAmount: newOrder.discountAmount,
+      tipAmount: 0,
+      loyaltyDiscount: 0,
+      finalPayableAmount: newOrder.grandTotal,
+      paidAmount: 0,
+      status: 'UNPAID',
+      createdAt: newOrder.createdAt,
+      splits: [],
+      items: newOrder.items.map((i) => ({
+        id: i.id,
+        itemName: i.foodItemName,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        totalPrice: i.subtotal,
+      })),
+    };
+    try {
+      const settledBills: Record<string, Bill> = JSON.parse(
+        localStorage.getItem('lowkey_demo_bills') || '{}'
+      );
+      settledBills[newOrder.id] = initialBill;
+      localStorage.setItem('lowkey_demo_bills', JSON.stringify(settledBills));
+    } catch (e) {
+      console.warn('Failed to save initial bill', e);
+    }
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: newOrder }));
+      window.dispatchEvent(new CustomEvent('lowkey_bill_update', { detail: initialBill }));
     }
 
     // Publish to cloud for kitchen and waiter screens (non-blocking fire-and-forget)
@@ -384,7 +421,7 @@ class CloudSyncService {
       }
     }
 
-    // Active resilient polling every 2.5 seconds to guarantee cross-device sync
+    // Active resilient polling every 5 seconds to guarantee cross-device sync
     if (!this.ordersPollTimer) {
       this.ordersPollTimer = setInterval(async () => {
         try {
@@ -393,7 +430,7 @@ class CloudSyncService {
         } catch (e) {
           // ignore network glitch
         }
-      }, 2500);
+      }, 5000);
     }
 
     return () => {
@@ -477,6 +514,29 @@ class CloudSyncService {
       items,
     };
 
+    try {
+      settledBills[orderId] = bill;
+      localStorage.setItem('lowkey_demo_bills', JSON.stringify(settledBills));
+    } catch (e) {
+      console.warn('Failed to cache bill', e);
+    }
+
+    return bill;
+  }
+
+  async saveBill(bill: Bill): Promise<Bill> {
+    try {
+      const settledBills: Record<string, Bill> = JSON.parse(
+        localStorage.getItem('lowkey_demo_bills') || '{}'
+      );
+      settledBills[bill.orderId] = bill;
+      localStorage.setItem('lowkey_demo_bills', JSON.stringify(settledBills));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lowkey_bill_update', { detail: bill }));
+      }
+    } catch (e) {
+      console.warn('Failed to save bill', e);
+    }
     return bill;
   }
 
@@ -620,7 +680,7 @@ class CloudSyncService {
       console.warn('Failed to parse local waiter requests', e);
     }
 
-    // 3. Poll past messages from cloud store (last 15m)
+    // 3. Poll past messages from cloud store (last 12h)
     for (const broker of CLOUD_BROKERS) {
       try {
         let signal: AbortSignal | undefined;
@@ -630,7 +690,7 @@ class CloudSyncService {
           timer = setTimeout(() => controller.abort(), 2000);
           signal = controller.signal;
         }
-        const res = await fetch(`${broker}/${WAITER_TOPIC}/json?poll=1&since=15m`, {
+        const res = await fetch(`${broker}/${WAITER_TOPIC}/json?poll=1&since=12h`, {
           headers: { 'Cache-Control': 'no-cache' },
           signal,
         });

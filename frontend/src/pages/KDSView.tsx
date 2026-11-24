@@ -60,12 +60,32 @@ export const KDSView: React.FC = () => {
   useEffect(() => {
     loadData();
 
-    // 1. Resilient auto-polling every 2.5s (ensures mobile takeaway & table orders appear immediately)
+    // 1. Resilient auto-polling every 4s (ensures mobile takeaway & table orders appear immediately)
     const pollId = setInterval(() => {
       loadData();
-    }, 2500);
+    }, 4000);
 
-    // 2. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS in real time)
+    // 2. Local instant update listener (0ms latency across same-device tabs)
+    const handleLocalOrder = (e: any) => {
+      const newOrUpdated: Order = e.detail;
+      if (!newOrUpdated) return;
+      setOrders((prev) => {
+        if (newOrUpdated.status === 'COMPLETED' || newOrUpdated.status === 'CANCELLED' || newOrUpdated.status === 'SERVED') {
+          return prev.filter((o) => o.id !== newOrUpdated.id);
+        }
+        const idx = prev.findIndex((o) => o.id === newOrUpdated.id);
+        if (idx > -1) {
+          const updated = [...prev];
+          updated[idx] = newOrUpdated;
+          return updated;
+        } else {
+          return [newOrUpdated, ...prev];
+        }
+      });
+    };
+    window.addEventListener('lowkey_order_update', handleLocalOrder);
+
+    // 3. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS in real time)
     const unsubCloud = cloudSync.subscribeToOrders((cloudOrders) => {
       setOrders((prev) => {
         const activeCloud = (cloudOrders || []).filter(
@@ -120,6 +140,7 @@ export const KDSView: React.FC = () => {
 
     return () => {
       clearInterval(pollId);
+      window.removeEventListener('lowkey_order_update', handleLocalOrder);
       unsubCloud();
       wsService.unsubscribe(subId);
     };

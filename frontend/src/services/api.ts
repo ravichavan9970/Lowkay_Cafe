@@ -39,6 +39,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Environment-aware flag for zero-delay local & serverless operation
+export const isVercelHost = typeof window !== 'undefined' && (
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('lowkey-cafe')
+);
+export const hasCustomBackend = Boolean((import.meta as any).env?.VITE_API_URL);
+export const shouldUseCloudSyncDirectly = isVercelHost || !hasCustomBackend;
+
 // Demo accounts dictionary for offline / Vercel preview fallback
 const DEMO_ACCOUNTS: Record<string, { pass: string; id: number; fullName: string; email: string; roles: string[] }> = {
   admin: { pass: 'admin123', id: 1, fullName: 'Cafe General Manager', email: 'admin@lowkeycafe.com', roles: ['ROLE_ADMIN'] },
@@ -174,6 +182,10 @@ export const menuApi = {
 
 export const tableApi = {
   getTables: async (): Promise<{ data: Table[] }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const tables = await cloudSync.getTables();
+      return { data: tables };
+    }
     try {
       const res = await api.get<Table[]>('/tables');
       if (isHtmlResponse(res.data) || !Array.isArray(res.data)) {
@@ -186,6 +198,11 @@ export const tableApi = {
     }
   },
   getTable: async (tableNum: number): Promise<{ data: Table }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const tables = await cloudSync.getTables();
+      const found = tables.find((t) => t.tableNumber === tableNum) || tables[0];
+      return { data: found };
+    }
     try {
       const res = await api.get<Table>(`/tables/${tableNum}`);
       if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
@@ -273,15 +290,42 @@ const generateOrderLocally = async (orderData: any): Promise<Order> => {
     }),
   };
 
-  return await cloudSync.createOrder(newOrder);
+  const savedOrder = await cloudSync.createOrder(newOrder);
+
+  // Auto-generate Bill immediately so it's guaranteed ready
+  const newBill: Bill = {
+    id: savedOrder.id,
+    billNumber: `BILL-${savedOrder.orderCode.replace('ORD-', '')}`,
+    orderId: savedOrder.id,
+    orderCode: savedOrder.orderCode,
+    tableNumber: savedOrder.tableNumber,
+    subtotal: savedOrder.subtotal,
+    taxAmount: savedOrder.taxAmount,
+    serviceCharge: savedOrder.serviceCharge,
+    discountAmount: savedOrder.discountAmount,
+    tipAmount: 0,
+    loyaltyDiscount: 0,
+    finalPayableAmount: savedOrder.grandTotal,
+    paidAmount: 0,
+    status: 'UNPAID',
+    createdAt: savedOrder.createdAt,
+    splits: [],
+    items: savedOrder.items.map((i) => ({
+      id: i.id,
+      itemName: i.foodItemName,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      totalPrice: i.subtotal,
+    })),
+  };
+  await cloudSync.saveBill(newBill);
+
+  return savedOrder;
 };
 
 export const orderApi = {
   createOrder: async (orderData: any): Promise<{ data: Order }> => {
-    const isVercelHost = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
-    const hasCustomBackend = Boolean((import.meta as any).env?.VITE_API_URL);
-
-    if (isVercelHost || !hasCustomBackend) {
+    if (shouldUseCloudSyncDirectly) {
       const saved = await generateOrderLocally(orderData);
       return { data: saved };
     }
@@ -298,6 +342,11 @@ export const orderApi = {
     }
   },
   trackOrder: async (orderCode: string): Promise<{ data: Order }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const found = await cloudSync.getOrderByCode(orderCode);
+      return { data: found || MOCK_ORDERS[0] };
+    }
+
     try {
       const res = await api.get<Order>(`/orders/${orderCode}`);
       if (isHtmlResponse(res.data) || !res.data || !res.data.orderCode) {
@@ -329,6 +378,11 @@ export const kitchenApi = {
       ]
     ),
   getOrders: async (): Promise<{ data: Order[] }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const orders = await cloudSync.getOrders();
+      return { data: orders };
+    }
+
     try {
       const res = await api.get<Order[]>('/kitchen/orders');
       if (isHtmlResponse(res.data) || !Array.isArray(res.data)) {
@@ -343,6 +397,27 @@ export const kitchenApi = {
   getOrdersByStation: (stationId: number) =>
     safeApiCall(() => api.get<Order[]>(`/kitchen/orders/station/${stationId}`), MOCK_ORDERS),
   updateOrderStatus: async (orderId: number, status: string, reason?: string) => {
+    if (shouldUseCloudSyncDirectly) {
+      const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason);
+      return {
+        data: updated || {
+          id: orderId,
+          orderCode: `ORD-${orderId}`,
+          tableNumber: 4,
+          customerName: 'Guest Diner',
+          status: status as any,
+          subtotal: 748,
+          taxAmount: 37.4,
+          serviceCharge: 37.4,
+          discountAmount: 0,
+          grandTotal: 822.8,
+          estimatedPrepMinutes: 12,
+          createdAt: new Date().toISOString(),
+          items: [],
+        },
+      };
+    }
+
     try {
       const res = await api.patch<Order>(`/kitchen/orders/${orderId}/status`, { status, reason });
       if (isHtmlResponse(res.data) || !res.data || !Array.isArray(res.data.items)) {
@@ -386,6 +461,11 @@ export const waiterApi = {
     return { data: saved };
   },
   getRequests: async (): Promise<{ data: WaiterRequest[] }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const list = await cloudSync.getWaiterRequests();
+      return { data: list };
+    }
+
     try {
       const res = await api.get<WaiterRequest[]>('/waiter/requests');
       if (isHtmlResponse(res.data) || !Array.isArray(res.data)) {
@@ -398,6 +478,20 @@ export const waiterApi = {
     }
   },
   acceptRequest: async (id: number) => {
+    if (shouldUseCloudSyncDirectly) {
+      const updated = await cloudSync.acceptWaiterRequest(id);
+      return {
+        data: updated || {
+          id,
+          tableNumber: 4,
+          requestType: 'ASSISTANCE',
+          status: 'IN_PROGRESS',
+          assignedWaiterName: 'Lead Waiter Alex',
+          requestedAt: new Date().toISOString(),
+        },
+      };
+    }
+
     try {
       const res = await api.patch<WaiterRequest>(`/waiter/requests/${id}/accept`);
       if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
@@ -419,6 +513,11 @@ export const waiterApi = {
     }
   },
   resolveRequest: async (id: number) => {
+    if (shouldUseCloudSyncDirectly) {
+      await cloudSync.resolveWaiterRequest(id);
+      return { data: { id, status: 'RESOLVED' } as any };
+    }
+
     try {
       const res = await api.patch<WaiterRequest>(`/waiter/requests/${id}/resolve`);
       if (isHtmlResponse(res.data) || !res.data || !res.data.id) {
@@ -438,6 +537,11 @@ export const waiterApi = {
 
 export const billingApi = {
   getBillForOrder: async (orderId: number): Promise<{ data: Bill }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const bill = await cloudSync.getBillForOrder(orderId);
+      return { data: bill };
+    }
+
     try {
       const res = await api.get<Bill>(`/billing/order/${orderId}`);
       if (isHtmlResponse(res.data) || !res.data || !res.data.items) {
@@ -456,6 +560,13 @@ export const billingApi = {
   initiatePayment: (data: any) =>
     safeApiCall(() => api.post<any>('/billing/pay/initiate', data), { paymentReference: `PAY-${Date.now()}`, gatewayOrderId: `order_${Date.now()}`, keyId: 'rzp_test_LowkeyCafe', amount: data.amount * 100 }),
   verifyPayment: async (data: any): Promise<{ data: Bill }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const billId = data.billId || 1;
+      const bill = await cloudSync.getBillForOrder(billId);
+      const paidBill = await cloudSync.recordPayment(bill, data.tipAmount || 0, 'UPI');
+      return { data: paidBill };
+    }
+
     try {
       const res = await api.post<Bill>('/billing/pay/verify', data);
       if (isHtmlResponse(res.data) || !res.data || !res.data.items) {
@@ -470,6 +581,13 @@ export const billingApi = {
     }
   },
   recordCashPayment: async (data: any): Promise<{ data: Bill }> => {
+    if (shouldUseCloudSyncDirectly) {
+      const billId = data.billId || 1;
+      const bill = await cloudSync.getBillForOrder(billId);
+      const paidBill = await cloudSync.recordPayment(bill, data.tipAmount || 0, 'CASH');
+      return { data: paidBill };
+    }
+
     try {
       const res = await api.post<Bill>('/billing/pay/cash', data);
       if (isHtmlResponse(res.data) || !res.data || !res.data.items) {
