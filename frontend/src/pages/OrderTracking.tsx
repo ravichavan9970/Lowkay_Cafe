@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { orderApi, billingApi, kitchenApi } from '../services/api';
 import { Order, Bill, OrderStatus } from '../types';
 import wsService from '../services/websocket';
+import cloudSync from '../services/cloudSyncService';
 import { Navbar } from '../components/Navbar';
 import Footer from '../components/Footer';
 import PaymentModal from '../components/PaymentModal';
@@ -83,7 +84,18 @@ export const OrderTracking: React.FC = () => {
       }
     }, 3000);
 
-    // 2. Subscribe to live WebSocket updates for this specific order
+    // 2. Real-time cloud subscription (instant cross-device SSE sync)
+    const unsubCloud = cloudSync.subscribeToOrders((orders) => {
+      const match = orders.find((o) => o.orderCode === orderCode);
+      if (match) {
+        setOrder(match);
+        if (match.id) {
+          billingApi.getBillForOrder(match.id).then((bRes) => setBill(bRes.data)).catch(() => {});
+        }
+      }
+    });
+
+    // 3. Subscribe to live WebSocket updates for this specific order
     const subId = wsService.subscribe(`/topic/orders/${orderCode}`, (updatedOrder: Order) => {
       console.log('⚡ Live Order Update received via WebSocket:', updatedOrder);
       setOrder(updatedOrder);
@@ -96,6 +108,7 @@ export const OrderTracking: React.FC = () => {
 
     return () => {
       clearInterval(pollId);
+      unsubCloud();
       wsService.unsubscribe(subId);
     };
   }, [orderCode]);

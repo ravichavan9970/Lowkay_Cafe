@@ -1,10 +1,14 @@
 import { Order, OrderStatus, WaiterRequest, Bill, Table } from '../types';
 import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
-// High-speed, pubsub endpoints on ntfy.sh (supports SSE & JSON history)
+// High-speed, unblocked community brokers with global access & SSE
+const CLOUD_BROKERS = [
+  'https://ntfy.tedomum.fr',
+  'https://ntfy.adminforge.de',
+];
+const PRIMARY_BROKER = CLOUD_BROKERS[0];
 const ORDERS_TOPIC = 'lowkey_cafe_orders_v2';
 const WAITER_TOPIC = 'lowkey_cafe_waiter_v2';
-const NTFY_BASE = 'https://ntfy.sh';
 
 interface OrderEvent {
   action: 'CREATE' | 'UPDATE_STATUS' | 'RECORD_PAYMENT';
@@ -83,37 +87,40 @@ class CloudSyncService {
   }
 
   /**
-   * Non-blocking fire-and-forget cloud publisher.
-   * Never blocks UI interactions or ordering even if network/broker is slow or down.
+   * Non-blocking fire-and-forget cloud publisher across reliable brokers.
+   * Dispatches in parallel to community brokers to ensure mobile and desktop always sync.
    */
   private publishToCloud(topic: string, body: any, title?: string) {
     if (typeof window === 'undefined') return;
-    try {
-      let signal: AbortSignal | undefined;
-      let timer: any = null;
-      if (typeof AbortController !== 'undefined') {
-        const controller = new AbortController();
-        timer = setTimeout(() => controller.abort(), 2000);
-        signal = controller.signal;
-      }
-      fetch(`${NTFY_BASE}/${topic}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(title ? { Title: title } : {}),
-        },
-        body: typeof body === 'string' ? body : JSON.stringify(body),
-        signal,
-      })
-        .then(() => {
-          if (timer) clearTimeout(timer);
+    const jsonBody = typeof body === 'string' ? body : JSON.stringify(body);
+    CLOUD_BROKERS.forEach((broker) => {
+      try {
+        let signal: AbortSignal | undefined;
+        let timer: any = null;
+        if (typeof AbortController !== 'undefined') {
+          const controller = new AbortController();
+          timer = setTimeout(() => controller.abort(), 3500);
+          signal = controller.signal;
+        }
+        fetch(`${broker}/${topic}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(title ? { Title: title } : {}),
+          },
+          body: jsonBody,
+          signal,
         })
-        .catch(() => {
-          if (timer) clearTimeout(timer);
-        });
-    } catch (e) {
-      // Non-blocking fire-and-forget
-    }
+          .then(() => {
+            if (timer) clearTimeout(timer);
+          })
+          .catch(() => {
+            if (timer) clearTimeout(timer);
+          });
+      } catch (e) {
+        // Non-blocking fire-and-forget
+      }
+    });
   }
 
   private initResolvedIds() {
@@ -174,39 +181,42 @@ class CloudSyncService {
       this.ordersMap.set(o.id, o);
     });
 
-    // 2. Poll past messages from cloud pubsub (with 1.2s timeout so it never hangs)
-    try {
-      let signal: AbortSignal | undefined;
-      let timer: any = null;
-      if (typeof AbortController !== 'undefined') {
-        const controller = new AbortController();
-        timer = setTimeout(() => controller.abort(), 1200);
-        signal = controller.signal;
-      }
-      const res = await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}/json?poll=1&since=15m`, {
-        headers: { 'Cache-Control': 'no-cache' },
-        signal,
-      });
-      if (timer) clearTimeout(timer);
-      if (res.ok) {
-        const text = await res.text();
-        const lines = text.trim().split('\n').filter(Boolean);
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            if (data.event === 'message') {
-              const payload = this.parsePayload<OrderEvent>(data.message);
-              if (payload) {
-                this.applyOrderEvent(payload);
-              }
-            }
-          } catch (e) {
-            // Ignore corrupted lines
-          }
+    // 2. Poll past messages from cloud pubsub (last 15m)
+    for (const broker of CLOUD_BROKERS) {
+      try {
+        let signal: AbortSignal | undefined;
+        let timer: any = null;
+        if (typeof AbortController !== 'undefined') {
+          const controller = new AbortController();
+          timer = setTimeout(() => controller.abort(), 2000);
+          signal = controller.signal;
         }
+        const res = await fetch(`${broker}/${ORDERS_TOPIC}/json?poll=1&since=15m`, {
+          headers: { 'Cache-Control': 'no-cache' },
+          signal,
+        });
+        if (timer) clearTimeout(timer);
+        if (res.ok) {
+          const text = await res.text();
+          const lines = text.trim().split('\n').filter(Boolean);
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.event === 'message') {
+                const payload = this.parsePayload<OrderEvent>(data.message);
+                if (payload) {
+                  this.applyOrderEvent(payload);
+                }
+              }
+            } catch (e) {
+              // Ignore corrupted lines
+            }
+          }
+          break; // Successfully loaded
+        }
+      } catch (err) {
+        // Try fallback broker
       }
-    } catch (err) {
-      // Offline or network block fallback
     }
 
     const merged = Array.from(this.ordersMap.values()).sort(
@@ -346,7 +356,7 @@ class CloudSyncService {
     if (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined') {
       if (!this.ordersEventSource) {
         try {
-          this.ordersEventSource = new EventSource(`${NTFY_BASE}/${ORDERS_TOPIC}/sse`);
+          this.ordersEventSource = new EventSource(`${PRIMARY_BROKER}/${ORDERS_TOPIC}/sse`);
           this.ordersEventSource.onmessage = (e) => {
             try {
               const data = JSON.parse(e.data);
@@ -609,39 +619,42 @@ class CloudSyncService {
       console.warn('Failed to parse local waiter requests', e);
     }
 
-    // 3. Poll past messages from cloud store (with 1.2s timeout so it never hangs)
-    try {
-      let signal: AbortSignal | undefined;
-      let timer: any = null;
-      if (typeof AbortController !== 'undefined') {
-        const controller = new AbortController();
-        timer = setTimeout(() => controller.abort(), 1200);
-        signal = controller.signal;
-      }
-      const res = await fetch(`${NTFY_BASE}/${WAITER_TOPIC}/json?poll=1&since=15m`, {
-        headers: { 'Cache-Control': 'no-cache' },
-        signal,
-      });
-      if (timer) clearTimeout(timer);
-      if (res.ok) {
-        const text = await res.text();
-        const lines = text.trim().split('\n').filter(Boolean);
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            if (data.event === 'message') {
-              const payload = this.parsePayload<WaiterEvent>(data.message);
-              if (payload) {
-                this.applyWaiterEvent(payload);
-              }
-            }
-          } catch (e) {
-            // Ignore corrupted lines
-          }
+    // 3. Poll past messages from cloud store (last 15m)
+    for (const broker of CLOUD_BROKERS) {
+      try {
+        let signal: AbortSignal | undefined;
+        let timer: any = null;
+        if (typeof AbortController !== 'undefined') {
+          const controller = new AbortController();
+          timer = setTimeout(() => controller.abort(), 2000);
+          signal = controller.signal;
         }
+        const res = await fetch(`${broker}/${WAITER_TOPIC}/json?poll=1&since=15m`, {
+          headers: { 'Cache-Control': 'no-cache' },
+          signal,
+        });
+        if (timer) clearTimeout(timer);
+        if (res.ok) {
+          const text = await res.text();
+          const lines = text.trim().split('\n').filter(Boolean);
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.event === 'message') {
+                const payload = this.parsePayload<WaiterEvent>(data.message);
+                if (payload) {
+                  this.applyWaiterEvent(payload);
+                }
+              }
+            } catch (e) {
+              // Ignore corrupted lines
+            }
+          }
+          break; // Successfully loaded
+        }
+      } catch (err) {
+        // Try fallback broker
       }
-    } catch (err) {
-      // Offline fallback
     }
 
     const activeList = Array.from(this.waiterRequestsMap.values())
@@ -769,7 +782,7 @@ class CloudSyncService {
     if (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined') {
       if (!this.waiterEventSource) {
         try {
-          this.waiterEventSource = new EventSource(`${NTFY_BASE}/${WAITER_TOPIC}/sse`);
+          this.waiterEventSource = new EventSource(`${PRIMARY_BROKER}/${WAITER_TOPIC}/sse`);
           this.waiterEventSource.onmessage = (e) => {
             try {
               const data = JSON.parse(e.data);
