@@ -31,7 +31,14 @@ export const WaiterDashboard: React.FC = () => {
 
   // Load floor tables and assistance requests
   const loadFloor = () => {
-    tableApi.getTables().then((res) => setTables(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    tableApi.getTables().then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setTables(list);
+      setSelectedTable((curr) => {
+        if (!curr) return null;
+        return list.find((t) => t.tableNumber === curr.tableNumber) || curr;
+      });
+    }).catch(console.error);
     waiterApi.getRequests().then((res) => {
       const activeList = Array.isArray(res.data) ? res.data.filter((r) => r.status !== 'RESOLVED') : [];
       setRequests(activeList);

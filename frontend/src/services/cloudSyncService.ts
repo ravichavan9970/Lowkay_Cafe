@@ -1,9 +1,9 @@
 import { Order, OrderStatus, WaiterRequest, Bill, Table } from '../types';
 import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
-// High-speed, unlimited pubsub endpoints on ntfy.sh (supports SSE & JSON history)
-const ORDERS_TOPIC = 'lowkey_cafe_orders_v1';
-const WAITER_TOPIC = 'lowkey_cafe_waiter_v1';
+// High-speed, pubsub endpoints on ntfy.sh (supports SSE & JSON history)
+const ORDERS_TOPIC = 'lowkey_cafe_orders_v2';
+const WAITER_TOPIC = 'lowkey_cafe_waiter_v2';
 const NTFY_BASE = 'https://ntfy.sh';
 
 interface OrderEvent {
@@ -34,9 +34,52 @@ class CloudSyncService {
 
   private ordersPollTimer: any = null;
   private waiterPollTimer: any = null;
+  private broadcastChannel: BroadcastChannel | null = null;
 
   constructor() {
     this.initResolvedIds();
+    this.initCrossTabSync();
+  }
+
+  private initCrossTabSync() {
+    if (typeof window !== 'undefined') {
+      try {
+        if ('BroadcastChannel' in window) {
+          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v2');
+          this.broadcastChannel.onmessage = (e) => {
+            const data = e.data;
+            if (!data) return;
+            if (data.type === 'ORDER_EVENT' && data.event) {
+              this.applyOrderEvent(data.event);
+              this.notifyOrderListeners();
+            } else if (data.type === 'WAITER_EVENT' && data.event) {
+              this.applyWaiterEvent(data.event);
+              this.notifyWaiterListeners();
+            }
+          };
+        }
+      } catch (err) {
+        console.warn('BroadcastChannel init error', err);
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'lowkey_demo_waiter_requests' || e.key === 'lowkey_resolved_waiter_ids') {
+          this.initResolvedIds();
+          this.getWaiterRequests().then((reqs) => this.notifyWaiterListeners(reqs)).catch(console.error);
+        }
+        if (e.key === 'lowkey_demo_orders' || e.key === 'lowkey_demo_bills') {
+          this.getOrders().then((ords) => this.notifyOrderListeners(ords)).catch(console.error);
+        }
+      });
+    }
+  }
+
+  private broadcastToTabs(type: 'ORDER_EVENT' | 'WAITER_EVENT', event: any) {
+    try {
+      this.broadcastChannel?.postMessage({ type, event });
+    } catch (err) {
+      console.warn('BroadcastChannel postMessage error', err);
+    }
   }
 
   private initResolvedIds() {
@@ -97,9 +140,9 @@ class CloudSyncService {
       this.ordersMap.set(o.id, o);
     });
 
-    // 2. Poll past messages from cloud pubsub
+    // 2. Poll past messages from cloud pubsub (last 15m to avoid rate limits)
     try {
-      const res = await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}/json?poll=1&since=all`, {
+      const res = await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}/json?poll=1&since=15m`, {
         headers: { 'Cache-Control': 'no-cache' },
       });
       if (res.ok) {
@@ -170,6 +213,7 @@ class CloudSyncService {
 
     // Publish to cloud for kitchen and waiter screens
     const event: OrderEvent = { action: 'CREATE', order: newOrder };
+    this.broadcastToTabs('ORDER_EVENT', event);
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
         method: 'POST',
@@ -251,6 +295,7 @@ class CloudSyncService {
 
     // Publish to cloud
     const event: OrderEvent = { action: 'UPDATE_STATUS', orderId, status };
+    this.broadcastToTabs('ORDER_EVENT', event);
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
         method: 'POST',
@@ -305,16 +350,19 @@ class CloudSyncService {
       }
     }
 
-    // Safety fallback poll every 6 seconds
+    // Safety fallback poll every 15 seconds (only when SSE is not open)
     if (!this.ordersPollTimer) {
       this.ordersPollTimer = setInterval(async () => {
+        if (this.ordersEventSource && this.ordersEventSource.readyState === 1) {
+          return;
+        }
         try {
           const fresh = await this.getOrders();
           this.notifyOrderListeners(fresh);
         } catch (e) {
           console.warn('Periodic order poll error', e);
         }
-      }, 6000);
+      }, 15000);
     }
 
     return () => {
@@ -434,6 +482,7 @@ class CloudSyncService {
     }
 
     const event: OrderEvent = { action: 'RECORD_PAYMENT', orderId: bill.orderId, bill: paidBill };
+    this.broadcastToTabs('ORDER_EVENT', event);
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
         method: 'POST',
@@ -532,9 +581,26 @@ class CloudSyncService {
       }
     });
 
-    // 2. Poll past messages from cloud store
+    // 2. Load locally stored requests (from Diner tab or previous actions)
     try {
-      const res = await fetch(`${NTFY_BASE}/${WAITER_TOPIC}/json?poll=1&since=all`, {
+      const localRaw = localStorage.getItem('lowkey_demo_waiter_requests');
+      if (localRaw) {
+        const localList: WaiterRequest[] = JSON.parse(localRaw);
+        if (Array.isArray(localList)) {
+          localList.forEach((r) => {
+            if (!this.resolvedWaiterIds.has(r.id)) {
+              this.waiterRequestsMap.set(r.id, r);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse local waiter requests', e);
+    }
+
+    // 3. Poll past messages from cloud store (last 15m to prevent rate limits)
+    try {
+      const res = await fetch(`${NTFY_BASE}/${WAITER_TOPIC}/json?poll=1&since=15m`, {
         headers: { 'Cache-Control': 'no-cache' },
       });
       if (res.ok) {
@@ -607,8 +673,9 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
     }
 
-    // Broadcast to cloud for waiter screens
+    // Broadcast to cloud and local tabs for waiter screens
     const event: WaiterEvent = { action: 'CALL', request: req };
+    this.broadcastToTabs('WAITER_EVENT', event);
     try {
       await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
         method: 'POST',
@@ -649,8 +716,9 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
     }
 
-    // Broadcast to cloud
+    // Broadcast to cloud and local tabs
     const event: WaiterEvent = { action: 'ACCEPT', id, waiterName };
+    this.broadcastToTabs('WAITER_EVENT', event);
     try {
       await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
         method: 'POST',
@@ -685,8 +753,9 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
     }
 
-    // Broadcast to cloud
+    // Broadcast to cloud and local tabs
     const event: WaiterEvent = { action: 'RESOLVE', id };
+    this.broadcastToTabs('WAITER_EVENT', event);
     try {
       await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
         method: 'POST',
@@ -738,16 +807,19 @@ class CloudSyncService {
       }
     }
 
-    // Safety fallback poll every 6 seconds
+    // Safety fallback poll every 15 seconds (only when SSE is not open)
     if (!this.waiterPollTimer) {
       this.waiterPollTimer = setInterval(async () => {
+        if (this.waiterEventSource && this.waiterEventSource.readyState === 1) {
+          return;
+        }
         try {
           const fresh = await this.getWaiterRequests();
           this.notifyWaiterListeners(fresh);
         } catch (e) {
           console.warn('Periodic waiter poll error', e);
         }
-      }, 6000);
+      }, 15000);
     }
 
     return () => {
