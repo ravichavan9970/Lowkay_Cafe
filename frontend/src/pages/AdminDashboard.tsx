@@ -273,9 +273,11 @@ export const AdminDashboard: React.FC = () => {
       {/* Top Navbar */}
       <header className="h-16 bg-white border-b border-stone-200 px-4 sm:px-6 flex items-center justify-between shadow-sm shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-stone-950 text-brand-400 flex items-center justify-center font-black shadow-md">
-            <LayoutDashboard className="w-5 h-5" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Lowkey Cafe Logo"
+            className="w-10 h-10 rounded-full object-cover shadow-md border border-stone-200 shrink-0"
+          />
           <div>
             <h1 className="font-display font-extrabold text-lg text-stone-950 flex items-center gap-2">
               Lowkey Cafe <span className="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-800 font-bold border border-brand-500/30">Owner Portal</span>

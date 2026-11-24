@@ -47,10 +47,12 @@ export const LoginPage: React.FC = () => {
         
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <Link to="/" className="inline-flex items-center gap-2 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 text-stone-950 font-black flex items-center justify-center shadow-lg">
-              <Coffee className="w-6 h-6" />
-            </div>
+          <Link to="/" className="inline-flex items-center gap-2 mb-3 group" title="Lowkey Cafe Home">
+            <img
+              src="/logo.png"
+              alt="Lowkey Cafe Logo"
+              className="w-16 h-16 rounded-full object-cover shadow-xl border-2 border-yellow-400/40 group-hover:scale-105 active:scale-95 transition-all"
+            />
           </Link>
           <h2 className="font-display font-extrabold text-2xl text-white">
             Staff & Admin Sign In

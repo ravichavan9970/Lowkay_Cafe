@@ -2,6 +2,30 @@ import jsPDF from 'jspdf';
 import { Bill } from '../types';
 import { generateQrDataUrl } from './qrService';
 
+const loadLogoDataUrl = async (): Promise<string | null> => {
+  if (typeof window === 'undefined') return null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+          return;
+        }
+      } catch (e) {}
+      resolve(null);
+    };
+    img.onerror = () => resolve(null);
+    img.src = '/logo.png';
+  });
+};
+
 /**
  * Client-side high-resolution PDF generator for Lowkey Cafe receipts.
  * Works 100% offline and in production (Vercel) without any backend server dependency.
@@ -21,27 +45,40 @@ export const downloadReceiptPdf = async (bill: Bill): Promise<void> => {
 
   // 1. Dark Luxury Header
   doc.setFillColor(18, 18, 18); // #121212
-  doc.rect(0, 0, pageWidth, 32, 'F');
+  doc.rect(0, 0, pageWidth, 34, 'F');
 
   // Accent yellow line
   doc.setFillColor(250, 204, 21); // brand yellow #facc15
-  doc.rect(0, 32, pageWidth, 1.5, 'F');
+  doc.rect(0, 34, pageWidth, 1.5, 'F');
+
+  // Embed official logo emblem if available
+  const logoDataUrl = await loadLogoDataUrl();
+  let textStartX = pageWidth / 2;
+  let textAlign: 'center' | 'left' = 'center';
+
+  if (logoDataUrl) {
+    try {
+      doc.addImage(logoDataUrl, 'PNG', margin, 5.5, 23, 23);
+      textStartX = margin + 27;
+      textAlign = 'left';
+    } catch (e) {}
+  }
 
   // Brand Name
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('LOWKEY CAFE', pageWidth / 2, 13, { align: 'center' });
+  doc.setFontSize(15);
+  doc.text('LOWKEY CAFE', textStartX, 13, { align: textAlign });
 
   // Tagline & Details
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(212, 212, 216); // stone-300
-  doc.text('SMART DIGITAL DINING EXPERIENCE', pageWidth / 2, 18.5, { align: 'center' });
-  doc.text('Artisan Roastery & Kitchen • GSTIN: 27AAACL9970F1Z2', pageWidth / 2, 23.5, { align: 'center' });
-  doc.text('742 Evergreen Terrace, Foodie Lane • Tel: +91 98765 43210', pageWidth / 2, 28, { align: 'center' });
+  doc.text('SMART DIGITAL DINING EXPERIENCE', textStartX, 18, { align: textAlign });
+  doc.text('Artisan Roastery & Kitchen • GSTIN: 27AAACL9970F1Z2', textStartX, 23, { align: textAlign });
+  doc.text('742 Evergreen Terrace, Foodie Lane • Tel: +91 98765 43210', textStartX, 27.5, { align: textAlign });
 
-  y = 41;
+  y = 43;
 
   // 2. Receipt Title & Status Stamp
   doc.setTextColor(24, 24, 27);

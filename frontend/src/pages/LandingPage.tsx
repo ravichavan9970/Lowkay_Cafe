@@ -115,9 +115,11 @@ export const LandingPage: React.FC = () => {
           
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-yellow-400 flex items-center justify-center text-black font-black shadow-lg shadow-yellow-400/25">
-              <Coffee className="w-5 h-5 text-black stroke-[2.5]" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Lowkey Cafe Logo"
+              className="w-11 h-11 rounded-full object-cover shadow-lg shadow-amber-500/25 border border-yellow-400/30"
+            />
             <div>
               <span className="font-display font-black text-xl tracking-tight text-white flex items-center gap-1">
                 Lowkey<span className="text-yellow-400">Cafe</span>
@@ -826,9 +828,11 @@ export const LandingPage: React.FC = () => {
       <footer className="py-12 bg-black border-t border-neutral-850 text-neutral-400 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-yellow-400 flex items-center justify-center text-black font-black">
-              <Coffee className="w-4 h-4 text-black stroke-[2.5]" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Lowkey Cafe Logo"
+              className="w-10 h-10 rounded-full object-cover shadow-md border border-yellow-400/30"
+            />
             <div>
               <span className="font-display font-black text-base text-white">
                 Lowkey<span className="text-yellow-400">Cafe</span>

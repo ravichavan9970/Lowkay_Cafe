@@ -164,9 +164,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           
           {/* Receipt Top Header */}
           <div className="text-center pb-4 border-b border-stone-200">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-brand-600 flex items-center justify-center mx-auto mb-2">
-              <Coffee className="w-6 h-6" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Lowkey Cafe Logo"
+              className="w-16 h-16 rounded-full mx-auto mb-2 object-cover shadow-md border-2 border-amber-500/30"
+            />
             <h2 className="font-display font-extrabold text-2xl text-stone-950">
               Lowkey Cafe
             </h2>

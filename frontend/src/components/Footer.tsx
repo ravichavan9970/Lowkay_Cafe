@@ -6,9 +6,11 @@ export const Footer: React.FC = () => {
     <footer className="bg-black text-neutral-400 py-10 border-t border-neutral-850 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-yellow-400 text-black flex items-center justify-center font-bold shadow-md shadow-yellow-400/20">
-            <Coffee className="w-4 h-4 stroke-[2.5]" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Lowkey Cafe Logo"
+            className="w-9 h-9 rounded-full object-cover shadow-md border border-yellow-400/30 shrink-0"
+          />
           <div>
             <span className="font-display font-black text-sm text-white">
               Lowkey<span className="text-yellow-400">Cafe</span>
