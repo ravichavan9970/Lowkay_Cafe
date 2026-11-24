@@ -205,8 +205,63 @@ export const tableApi = {
     ),
 };
 
+const generateOrderLocally = async (orderData: any): Promise<Order> => {
+  const randomCode = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+  const subtotal = (orderData.items || []).reduce((acc: number, item: any) => {
+    const food = MOCK_FOOD_ITEMS.find((f) => f.id === item.foodItemId) || MOCK_FOOD_ITEMS[0];
+    return acc + food.price * (item.quantity || 1);
+  }, 0);
+  const taxAmount = Math.round(subtotal * 0.05 * 100) / 100;
+  const isTakeawayOrder = orderData.tableNumber === 0;
+  const serviceCharge = isTakeawayOrder ? 0 : Math.round(subtotal * 0.05 * 100) / 100;
+  const grandTotal = subtotal + taxAmount + serviceCharge;
+
+  const newOrder: Order = {
+    id: Date.now(),
+    orderCode: randomCode,
+    tableNumber: orderData.tableNumber !== undefined ? orderData.tableNumber : 10,
+    customerName: orderData.customerName || (isTakeawayOrder ? 'Takeaway Customer' : 'Guest Diner'),
+    customerPhone: orderData.customerPhone || '+91 98765 43210',
+    status: 'NEW_ORDER',
+    subtotal,
+    taxAmount,
+    serviceCharge,
+    discountAmount: 0,
+    grandTotal,
+    estimatedPrepMinutes: 15,
+    createdAt: new Date().toISOString(),
+    items: (orderData.items || []).map((item: any, idx: number) => {
+      const food = MOCK_FOOD_ITEMS.find((f) => f.id === item.foodItemId) || MOCK_FOOD_ITEMS[0];
+      return {
+        id: idx + 1,
+        foodItemId: food.id,
+        foodItemName: food.name,
+        foodItemImage: food.imageUrl || '',
+        categoryName: 'Mains',
+        quantity: item.quantity || 1,
+        unitPrice: food.price,
+        subtotal: food.price * (item.quantity || 1),
+        selectedPortion: item.selectedPortion || 'Full',
+        selectedSpiceLevel: item.selectedSpiceLevel || 'MEDIUM',
+        status: 'NEW_ORDER',
+        customizations: item.customizations || [],
+      };
+    }),
+  };
+
+  return await cloudSync.createOrder(newOrder);
+};
+
 export const orderApi = {
   createOrder: async (orderData: any): Promise<{ data: Order }> => {
+    const isVercelHost = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+    const hasCustomBackend = Boolean((import.meta as any).env?.VITE_API_URL);
+
+    if (isVercelHost || !hasCustomBackend) {
+      const saved = await generateOrderLocally(orderData);
+      return { data: saved };
+    }
+
     try {
       const res = await api.post<Order>('/orders', orderData);
       if (isHtmlResponse(res.data) || !res.data || !res.data.orderCode) {
@@ -214,51 +269,7 @@ export const orderApi = {
       }
       return res;
     } catch {
-      // Vercel / offline fallback: generate order and persist in local storage
-      const randomCode = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-      const subtotal = (orderData.items || []).reduce((acc: number, item: any) => {
-        const food = MOCK_FOOD_ITEMS.find((f) => f.id === item.foodItemId) || MOCK_FOOD_ITEMS[0];
-        return acc + food.price * (item.quantity || 1);
-      }, 0);
-      const taxAmount = Math.round(subtotal * 0.05 * 100) / 100;
-      const isTakeawayOrder = orderData.tableNumber === 0;
-      const serviceCharge = isTakeawayOrder ? 0 : Math.round(subtotal * 0.05 * 100) / 100;
-      const grandTotal = subtotal + taxAmount + serviceCharge;
-
-      const newOrder: Order = {
-        id: Date.now(),
-        orderCode: randomCode,
-        tableNumber: orderData.tableNumber !== undefined ? orderData.tableNumber : 4,
-        customerName: orderData.customerName || (isTakeawayOrder ? 'Takeaway Customer' : 'Guest Diner'),
-        customerPhone: orderData.customerPhone || '+91 98765 43210',
-        status: 'NEW_ORDER',
-        subtotal,
-        taxAmount,
-        serviceCharge,
-        discountAmount: 0,
-        grandTotal,
-        estimatedPrepMinutes: 15,
-        createdAt: new Date().toISOString(),
-        items: (orderData.items || []).map((item: any, idx: number) => {
-          const food = MOCK_FOOD_ITEMS.find((f) => f.id === item.foodItemId) || MOCK_FOOD_ITEMS[0];
-          return {
-            id: idx + 1,
-            foodItemId: food.id,
-            foodItemName: food.name,
-            foodItemImage: food.imageUrl || '',
-            categoryName: 'Mains',
-            quantity: item.quantity || 1,
-            unitPrice: food.price,
-            subtotal: food.price * (item.quantity || 1),
-            selectedPortion: item.selectedPortion || 'Full',
-            selectedSpiceLevel: item.selectedSpiceLevel || 'MEDIUM',
-            status: 'NEW_ORDER',
-            customizations: item.customizations || [],
-          };
-        }),
-      };
-
-      const saved = await cloudSync.createOrder(newOrder);
+      const saved = await generateOrderLocally(orderData);
       return { data: saved };
     }
   },

@@ -82,6 +82,40 @@ class CloudSyncService {
     }
   }
 
+  /**
+   * Non-blocking fire-and-forget cloud publisher.
+   * Never blocks UI interactions or ordering even if network/broker is slow or down.
+   */
+  private publishToCloud(topic: string, body: any, title?: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      let signal: AbortSignal | undefined;
+      let timer: any = null;
+      if (typeof AbortController !== 'undefined') {
+        const controller = new AbortController();
+        timer = setTimeout(() => controller.abort(), 2000);
+        signal = controller.signal;
+      }
+      fetch(`${NTFY_BASE}/${topic}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(title ? { Title: title } : {}),
+        },
+        body: typeof body === 'string' ? body : JSON.stringify(body),
+        signal,
+      })
+        .then(() => {
+          if (timer) clearTimeout(timer);
+        })
+        .catch(() => {
+          if (timer) clearTimeout(timer);
+        });
+    } catch (e) {
+      // Non-blocking fire-and-forget
+    }
+  }
+
   private initResolvedIds() {
     try {
       const raw = localStorage.getItem('lowkey_resolved_waiter_ids');
@@ -140,11 +174,20 @@ class CloudSyncService {
       this.ordersMap.set(o.id, o);
     });
 
-    // 2. Poll past messages from cloud pubsub (last 15m to avoid rate limits)
+    // 2. Poll past messages from cloud pubsub (with 1.2s timeout so it never hangs)
     try {
+      let signal: AbortSignal | undefined;
+      let timer: any = null;
+      if (typeof AbortController !== 'undefined') {
+        const controller = new AbortController();
+        timer = setTimeout(() => controller.abort(), 1200);
+        signal = controller.signal;
+      }
       const res = await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}/json?poll=1&since=15m`, {
         headers: { 'Cache-Control': 'no-cache' },
+        signal,
       });
+      if (timer) clearTimeout(timer);
       if (res.ok) {
         const text = await res.text();
         const lines = text.trim().split('\n').filter(Boolean);
@@ -163,7 +206,7 @@ class CloudSyncService {
         }
       }
     } catch (err) {
-      console.warn('Could not poll orders from cloud store, using local cache', err);
+      // Offline or network block fallback
     }
 
     const merged = Array.from(this.ordersMap.values()).sort(
@@ -211,22 +254,10 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: newOrder }));
     }
 
-    // Publish to cloud for kitchen and waiter screens
+    // Publish to cloud for kitchen and waiter screens (non-blocking fire-and-forget)
     const event: OrderEvent = { action: 'CREATE', order: newOrder };
     this.broadcastToTabs('ORDER_EVENT', event);
-    try {
-      await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Title': `New Order #${newOrder.orderCode} (Table ${newOrder.tableNumber})`,
-        },
-        body: JSON.stringify(event),
-      });
-      console.log('✅ Order published to cloud for Kitchen KDS:', newOrder.orderCode);
-    } catch (err) {
-      console.warn('Failed to publish order to cloud', err);
-    }
+    this.publishToCloud(ORDERS_TOPIC, event, `New Order #${newOrder.orderCode} (Table ${newOrder.tableNumber})`);
 
     this.notifyOrderListeners();
     return newOrder;
@@ -293,21 +324,10 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: updatedOrder }));
     }
 
-    // Publish to cloud
+    // Publish to cloud (non-blocking fire-and-forget)
     const event: OrderEvent = { action: 'UPDATE_STATUS', orderId, status };
     this.broadcastToTabs('ORDER_EVENT', event);
-    try {
-      await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Title': `Order #${updatedOrder.orderCode} -> ${status}`,
-        },
-        body: JSON.stringify(event),
-      });
-    } catch (err) {
-      console.warn('Failed to publish order status to cloud', err);
-    }
+    this.publishToCloud(ORDERS_TOPIC, event, `Order #${updatedOrder.orderCode} -> ${status}`);
 
     this.notifyOrderListeners();
     return updatedOrder;
@@ -483,16 +503,7 @@ class CloudSyncService {
 
     const event: OrderEvent = { action: 'RECORD_PAYMENT', orderId: bill.orderId, bill: paidBill };
     this.broadcastToTabs('ORDER_EVENT', event);
-    try {
-      await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Title': `Bill Paid #${paidBill.billNumber}`,
-        },
-        body: JSON.stringify(event),
-      });
-    } catch (ignored) {}
+    this.publishToCloud(ORDERS_TOPIC, event, `Bill Paid #${paidBill.billNumber}`);
 
     console.log('💳 Payment completed and recorded for Bill #', paidBill.billNumber);
     return paidBill;
@@ -598,11 +609,20 @@ class CloudSyncService {
       console.warn('Failed to parse local waiter requests', e);
     }
 
-    // 3. Poll past messages from cloud store (last 15m to prevent rate limits)
+    // 3. Poll past messages from cloud store (with 1.2s timeout so it never hangs)
     try {
+      let signal: AbortSignal | undefined;
+      let timer: any = null;
+      if (typeof AbortController !== 'undefined') {
+        const controller = new AbortController();
+        timer = setTimeout(() => controller.abort(), 1200);
+        signal = controller.signal;
+      }
       const res = await fetch(`${NTFY_BASE}/${WAITER_TOPIC}/json?poll=1&since=15m`, {
         headers: { 'Cache-Control': 'no-cache' },
+        signal,
       });
+      if (timer) clearTimeout(timer);
       if (res.ok) {
         const text = await res.text();
         const lines = text.trim().split('\n').filter(Boolean);
@@ -621,7 +641,7 @@ class CloudSyncService {
         }
       }
     } catch (err) {
-      console.warn('Could not poll waiter requests from cloud store', err);
+      // Offline fallback
     }
 
     const activeList = Array.from(this.waiterRequestsMap.values())
@@ -673,22 +693,10 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
     }
 
-    // Broadcast to cloud and local tabs for waiter screens
+    // Broadcast to cloud and local tabs for waiter screens (non-blocking)
     const event: WaiterEvent = { action: 'CALL', request: req };
     this.broadcastToTabs('WAITER_EVENT', event);
-    try {
-      await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Title': `Table #${req.tableNumber} - ${req.requestType}`,
-        },
-        body: JSON.stringify(event),
-      });
-      console.log('🔔 Waiter call published to cloud for Table #', req.tableNumber);
-    } catch (err) {
-      console.warn('Failed to publish waiter call to cloud', err);
-    }
+    this.publishToCloud(WAITER_TOPIC, event, `Table #${req.tableNumber} - ${req.requestType}`);
 
     this.notifyWaiterListeners();
     return req;
@@ -716,21 +724,10 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
     }
 
-    // Broadcast to cloud and local tabs
+    // Broadcast to cloud and local tabs (non-blocking)
     const event: WaiterEvent = { action: 'ACCEPT', id, waiterName };
     this.broadcastToTabs('WAITER_EVENT', event);
-    try {
-      await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Title': `Call Accepted for Table`,
-        },
-        body: JSON.stringify(event),
-      });
-    } catch (err) {
-      console.warn('Failed to publish waiter accept to cloud', err);
-    }
+    this.publishToCloud(WAITER_TOPIC, event, `Call Accepted for Table`);
 
     this.notifyWaiterListeners();
     return req || null;
@@ -753,21 +750,10 @@ class CloudSyncService {
       window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
     }
 
-    // Broadcast to cloud and local tabs
+    // Broadcast to cloud and local tabs (non-blocking)
     const event: WaiterEvent = { action: 'RESOLVE', id };
     this.broadcastToTabs('WAITER_EVENT', event);
-    try {
-      await fetch(`${NTFY_BASE}/${WAITER_TOPIC}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Title': `Call Resolved`,
-        },
-        body: JSON.stringify(event),
-      });
-    } catch (err) {
-      console.warn('Failed to publish waiter resolve to cloud', err);
-    }
+    this.publishToCloud(WAITER_TOPIC, event, `Call Resolved`);
 
     this.notifyWaiterListeners();
   }

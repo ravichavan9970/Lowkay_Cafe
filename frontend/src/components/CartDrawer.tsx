@@ -103,8 +103,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
+      const effectiveTable = isTakeaway ? 0 : (tableNumber && Number(tableNumber) > 0 ? Number(tableNumber) : 10);
       const payload = {
-        tableNumber: isTakeaway ? 0 : (tableNumber || 1),
+        tableNumber: effectiveTable,
         customerName: customerName.trim() || (isTakeaway ? 'Takeaway Customer' : 'Guest Diner'),
         customerPhone: customerPhone.trim() || undefined,
         specialInstructions: isTakeaway
@@ -122,17 +123,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         })),
       };
 
-      const res = await orderApi.createOrder(payload);
+      // Failsafe timeout to ensure button never stays stuck
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Order submission timed out')), 4000)
+      );
+
+      const res = await Promise.race([orderApi.createOrder(payload), timeoutPromise]);
       const newOrder = res.data;
+
+      if (!newOrder || !newOrder.orderCode) {
+        throw new Error('Order creation did not return a valid order');
+      }
 
       // Clear cart & set active order
       clearCart();
       setActiveOrderCode(newOrder.orderCode);
       onClose();
 
-      // Navigate to order tracking
+      // Navigate to order tracking immediately
       navigate(`/order-tracking/${newOrder.orderCode}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to submit order', err);
       alert('Could not place order. Please try again.');
     } finally {
