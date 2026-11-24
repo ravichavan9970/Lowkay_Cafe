@@ -27,8 +27,8 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
   // Determine current active mode based on route
   const currentPath = location.pathname;
 
-  // Only show sidebar switcher on staff routes or for logged-in staff members.
-  // Customers on the landing page, table menu, or takeaway will NEVER see this!
+  // Only show sidebar switcher on staff routes.
+  // The landing dashboard, table menu, and takeaway will NEVER show this sidebar.
   const isStaffRoute =
     currentPath.startsWith('/kds') ||
     currentPath.startsWith('/waiter') ||
@@ -37,10 +37,7 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
     currentPath.startsWith('/portal') ||
     currentPath.startsWith('/staff');
 
-  const isStaffUser =
-    user && Array.isArray(user.roles) && user.roles.some((r) => r !== 'ROLE_CUSTOMER');
-
-  if (!isStaffRoute && !isStaffUser) {
+  if (!isStaffRoute) {
     return null;
   }
 
