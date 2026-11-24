@@ -151,21 +151,27 @@ export const OrderTracking: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-10 h-10 animate-spin text-yellow-400" />
+          <p className="text-xs text-neutral-400 font-medium tracking-wide">Connecting to Live Kitchen...</p>
+        </div>
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="min-h-screen flex flex-col bg-stone-50">
+      <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <h2 className="font-display font-extrabold text-2xl text-stone-900">Order Not Found</h2>
-          <p className="text-xs text-stone-500 mt-2">Could not locate order code {orderCode}</p>
-          <Link to="/" className="mt-4 px-4 py-2 bg-stone-900 text-white rounded-xl text-xs font-bold">
-            Back to Menu
+          <div className="w-16 h-16 rounded-3xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-4">
+            <Clock className="w-8 h-8 text-yellow-400" />
+          </div>
+          <h2 className="font-display font-extrabold text-2xl text-white">Order Not Found</h2>
+          <p className="text-xs text-neutral-400 mt-2">Could not locate order code {orderCode}</p>
+          <Link to="/" className="mt-5 px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black rounded-2xl text-xs font-black shadow-lg shadow-yellow-400/20 active:scale-95 transition-all">
+            Return to Menu
           </Link>
         </div>
         <Footer />
@@ -179,38 +185,50 @@ export const OrderTracking: React.FC = () => {
   const isCancelled = order.status === 'CANCELLED';
 
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50">
+    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white selection:bg-yellow-400 selection:text-black">
       <Navbar />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
+      <main className="max-w-3xl mx-auto px-3.5 sm:px-6 py-6 flex-1 w-full space-y-5">
         
-        {/* Top Back Navigation & Header */}
+        {/* Top Back Navigation & Table/Order Pill */}
         <div className="flex items-center justify-between">
           <Link
             to={order.tableNumber === 0 ? '/takeaway' : `/table/${order.tableNumber}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 hover:text-stone-900"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-400 hover:text-yellow-400 transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4 text-yellow-400" />
             <span>Add More Items</span>
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500">
-              {order.tableNumber === 0 ? '🥡 Takeaway / Pickup' : `Table #${order.tableNumber}`}
+            <span className="text-xs text-neutral-400">
+              {order.tableNumber === 0 ? '🥡 Takeaway' : `Table #${order.tableNumber}`}
             </span>
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-stone-200 text-stone-800">
+            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-neutral-900 border border-neutral-800 text-yellow-400 shadow-inner">
               {order.orderCode}
             </span>
           </div>
         </div>
 
         {/* Live Status Hero Card */}
-        <div className="bg-stone-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+        <div className="bg-neutral-900/90 border border-neutral-800 text-white p-5 sm:p-7 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-xl">
+          {/* Subtle Ambient Glow */}
+          <div className="absolute -top-24 -right-24 w-60 h-60 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none"></div>
+
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/20 text-brand-400 text-xs font-semibold mb-2">
-                <Clock className="w-3.5 h-3.5 animate-spin" />
-                <span>Live Kitchen Tracking</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 text-yellow-300 text-xs font-bold mb-2.5">
+                {isCompleted ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>Dining Complete</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-3.5 h-3.5 animate-spin text-yellow-400" />
+                    <span>Live Kitchen Tracking</span>
+                  </>
+                )}
               </div>
               <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-white">
                 {isCancelled
@@ -223,20 +241,26 @@ export const OrderTracking: React.FC = () => {
                   ? 'Cooking Your Meal'
                   : 'Order Confirmed'}
               </h1>
-              <p className="text-xs sm:text-sm text-stone-400 mt-1">
-                Estimated preparation: <strong>{order.estimatedPrepMinutes} minutes</strong>
-              </p>
+              {isCompleted ? (
+                <p className="text-xs sm:text-sm text-neutral-300 mt-1">
+                  All dishes served & dining settled. Thank you for dining with Lowkey Cafe!
+                </p>
+              ) : (
+                <p className="text-xs sm:text-sm text-neutral-400 mt-1">
+                  Estimated preparation: <strong className="text-yellow-400 font-bold">{order.estimatedPrepMinutes} minutes</strong>
+                </p>
+              )}
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
-              {!isCompleted && !isCancelled && (
+            {/* Quick Actions (Fast forward demo and Call Waiter) */}
+            {!isCompleted && !isCancelled && (
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleFastForwardStatus}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 text-xs font-black flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                  className="px-3.5 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
                   title="Simulate next kitchen step"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>
                     {order.status === 'PREPARING'
                       ? 'Mark Food Ready'
@@ -245,36 +269,38 @@ export const OrderTracking: React.FC = () => {
                       : 'Advance Status'}
                   </span>
                 </button>
-              )}
 
-              <button
-                onClick={() => setShowCallWaiter(true)}
-                className="px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold flex items-center gap-1.5 border border-stone-700 transition-colors"
-              >
-                <Bell className="w-3.5 h-3.5 text-brand-400" />
-                <span>Call Waiter</span>
-              </button>
-            </div>
+                <button
+                  onClick={() => setShowCallWaiter(true)}
+                  className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold flex items-center gap-1.5 border border-neutral-700 transition-colors active:scale-95"
+                >
+                  <Bell className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Call Waiter</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Stepper Timeline */}
           {!isCancelled && (
-            <div className="mt-8 pt-6 border-t border-stone-800">
+            <div className="mt-7 pt-6 border-t border-neutral-800/80">
               <div className="relative flex justify-between">
                 
                 {/* Connecting Line */}
-                <div className="absolute top-4 left-4 right-4 h-0.5 bg-stone-800 -z-0">
+                <div className="absolute top-4 left-4 right-4 h-0.5 bg-neutral-800 -z-0">
                   <div
-                    className="h-full bg-brand-500 transition-all duration-500"
+                    className="h-full bg-yellow-400 transition-all duration-500 shadow-[0_0_12px_rgba(250,204,21,0.5)]"
                     style={{
-                      width: `${Math.max(0, (currentStepIdx / (STATUS_STEPS.length - 1)) * 100)}%`,
+                      width: isCompleted
+                        ? '100%'
+                        : `${Math.max(0, (currentStepIdx / (STATUS_STEPS.length - 1)) * 100)}%`,
                     }}
                   ></div>
                 </div>
 
                 {STATUS_STEPS.map((step, idx) => {
                   const Icon = step.icon;
-                  const isDone = currentStepIdx >= idx || isCompleted;
+                  const isDone = isCompleted || currentStepIdx >= idx;
                   const isCurrent = currentStepIdx === idx && !isCompleted;
 
                   return (
@@ -282,21 +308,21 @@ export const OrderTracking: React.FC = () => {
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                           isDone
-                            ? 'bg-brand-500 text-stone-950 font-bold'
+                            ? 'bg-yellow-400 text-black font-black shadow-md shadow-yellow-400/30'
                             : isCurrent
-                            ? 'bg-amber-400 text-stone-950 font-black ring-4 ring-amber-400/20'
-                            : 'bg-stone-800 text-stone-600'
+                            ? 'bg-yellow-400 text-black font-black ring-4 ring-yellow-400/25'
+                            : 'bg-neutral-800 text-neutral-500 border border-neutral-700'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-4 h-4 stroke-[2.5]" />
                       </div>
                       <span
                         className={`text-[10px] sm:text-xs font-bold mt-2 max-w-[60px] sm:max-w-none leading-tight ${
                           isCurrent
-                            ? 'text-amber-400'
+                            ? 'text-yellow-400 font-extrabold'
                             : isDone
-                            ? 'text-stone-300'
-                            : 'text-stone-600'
+                            ? 'text-neutral-200'
+                            : 'text-neutral-500'
                         }`}
                       >
                         {step.label}
@@ -310,21 +336,21 @@ export const OrderTracking: React.FC = () => {
         </div>
 
         {/* Order Details & Items Card */}
-        <div className="bg-white p-6 rounded-3xl border border-stone-200/90 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-            <h3 className="font-display font-extrabold text-base text-stone-900">
+        <div className="bg-neutral-900/90 border border-neutral-800 p-5 sm:p-7 rounded-3xl shadow-xl space-y-4 text-white">
+          <div className="flex items-center justify-between pb-3.5 border-b border-neutral-800">
+            <h3 className="font-display font-extrabold text-base text-white">
               Ordered Dishes ({order.items.length})
             </h3>
-            <span className="text-xs text-stone-500">
-              Diner: <strong>{order.customerName}</strong>
+            <span className="text-xs text-neutral-400">
+              Diner: <strong className="text-yellow-400">{order.customerName}</strong>
             </span>
           </div>
 
-          <div className="divide-y divide-stone-100">
+          <div className="divide-y divide-neutral-800/80">
             {order.items.map((item) => (
-              <div key={item.id} className="py-3 flex items-start justify-between gap-3">
+              <div key={item.id} className="py-3.5 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-stone-100 overflow-hidden shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-neutral-800 border border-neutral-700/60 overflow-hidden shrink-0">
                     <img
                       src={item.foodItemImage || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'}
                       alt={item.foodItemName}
@@ -332,25 +358,25 @@ export const OrderTracking: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <h4 className="font-display font-bold text-sm text-stone-900">
+                    <h4 className="font-display font-bold text-sm text-white">
                       {item.foodItemName}
                     </h4>
-                    <p className="text-[11px] text-stone-500">
+                    <p className="text-[11px] text-neutral-400">
                       Qty: {item.quantity} • {item.selectedPortion} • {item.selectedSpiceLevel}
                     </p>
                     {item.customizations && item.customizations.length > 0 && (
-                      <p className="text-[10px] text-brand-700">
+                      <p className="text-[10px] text-yellow-400 font-medium">
                         {item.customizations.map((c) => `+${c.optionName}`).join(', ')}
                       </p>
                     )}
                     {item.removedIngredients && (
-                      <p className="text-[10px] text-rose-600 italic">
+                      <p className="text-[10px] text-rose-400 italic">
                         No: {item.removedIngredients}
                       </p>
                     )}
                   </div>
                 </div>
-                <span className="font-bold text-sm text-stone-900">
+                <span className="font-bold text-sm text-yellow-400 font-mono">
                   ₹{item.subtotal}
                 </span>
               </div>
@@ -358,28 +384,28 @@ export const OrderTracking: React.FC = () => {
           </div>
 
           {/* Pricing Breakdown */}
-          <div className="pt-3 border-t border-stone-100 space-y-1.5 text-xs text-stone-600">
+          <div className="pt-3 border-t border-neutral-800 space-y-2 text-xs text-neutral-400">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span className="font-semibold text-stone-900">₹{order.subtotal.toFixed(2)}</span>
+              <span className="font-semibold text-neutral-200">₹{order.subtotal.toFixed(2)}</span>
             </div>
             {order.discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-600">
+              <div className="flex justify-between text-emerald-400">
                 <span>Discount ({order.appliedCouponCode})</span>
                 <span>-₹{order.discountAmount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span>Taxes (5% GST)</span>
-              <span>₹{order.taxAmount.toFixed(2)}</span>
+              <span className="text-neutral-200">₹{order.taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Service Charge (5%)</span>
-              <span>₹{order.serviceCharge.toFixed(2)}</span>
+              <span className="text-neutral-200">₹{order.serviceCharge.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-base font-extrabold text-stone-950 pt-2 border-t border-stone-200">
+            <div className="flex justify-between text-base font-extrabold text-white pt-2.5 border-t border-neutral-800">
               <span>Grand Total</span>
-              <span className="font-display font-black text-brand-600">
+              <span className="font-display font-black text-yellow-400 text-lg">
                 ₹{order.grandTotal.toFixed(2)}
               </span>
             </div>
@@ -388,72 +414,76 @@ export const OrderTracking: React.FC = () => {
 
         {/* Digital Billing & Settlement Actions */}
         {bill && (
-          <div className="bg-gradient-to-tr from-amber-50 to-orange-50 p-6 rounded-3xl border border-amber-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
+          <div className="bg-neutral-900/90 border border-yellow-400/30 p-5 sm:p-7 rounded-3xl shadow-xl shadow-yellow-400/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="w-full sm:w-auto">
               <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-brand-700" />
-                <h3 className="font-display font-extrabold text-base text-stone-900">
+                <div className="w-8 h-8 rounded-xl bg-yellow-400/15 border border-yellow-400/30 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 text-yellow-400" />
+                </div>
+                <h3 className="font-display font-extrabold text-base text-white">
                   Digital Bill: #{bill.billNumber}
                 </h3>
               </div>
-              <p className="text-xs text-stone-600 mt-1">
-                Status:{' '}
-                <strong
-                  className={
-                    bill.status === 'PAID' ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'
-                  }
+              <p className="text-xs text-neutral-400 mt-1.5 flex items-center gap-1.5">
+                <span>Status:</span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    bill.status === 'PAID'
+                      ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-400'
+                      : 'bg-amber-500/15 border border-amber-500/40 text-yellow-300'
+                  }`}
                 >
                   {bill.status}
-                </strong>
-                {bill.status === 'PAID' ? ' (Thank you!)' : ` • Amount Due: ₹${bill.finalPayableAmount}`}
+                </span>
+                <span>{bill.status === 'PAID' ? '(Thank you!)' : `• Amount Due: ₹${bill.finalPayableAmount}`}</span>
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            <div className="w-full sm:w-auto">
               {bill.status !== 'PAID' ? (
-                <>
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
                   <button
                     onClick={() => setShowSplit(true)}
-                    className="flex-1 sm:flex-none px-3.5 py-2.5 bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                    className="w-full sm:w-auto px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors active:scale-95"
                   >
-                    <Users className="w-4 h-4 text-stone-600" />
+                    <Users className="w-4 h-4 text-neutral-400" />
                     <span>Split Bill</span>
                   </button>
 
                   <button
                     onClick={() => setShowPayment(true)}
-                    className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-stone-900 to-stone-800 hover:from-brand-600 hover:to-amber-500 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-98"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black font-black rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-yellow-400/20 transition-all active:scale-95"
                   >
                     <span>Pay Bill (₹{bill.finalPayableAmount})</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
-                </>
+                </div>
               ) : (
-                <>
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 w-full">
                   <button
                     onClick={() => setShowReceipt(true)}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-stone-800 border border-stone-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm hover:bg-stone-50 transition-colors"
+                    className="px-3.5 py-2.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors active:scale-95 shadow-sm"
                   >
-                    <Receipt className="w-4 h-4 text-amber-600" />
+                    <Receipt className="w-4 h-4 text-yellow-400" />
                     <span>View Receipt</span>
                   </button>
 
                   <button
                     onClick={() => downloadReceiptPdf(bill)}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-stone-950 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-98"
+                    className="px-3.5 py-2.5 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
                   >
-                    <Download className="w-4 h-4 text-stone-950" />
+                    <Download className="w-4 h-4 stroke-[2.5]" />
                     <span>Download PDF</span>
                   </button>
 
                   <button
                     onClick={() => setShowReview(true)}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md"
+                    className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-yellow-300 border border-neutral-800 hover:border-yellow-400/40 text-xs font-extrabold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm"
                   >
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     <span>Rate Dining</span>
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>

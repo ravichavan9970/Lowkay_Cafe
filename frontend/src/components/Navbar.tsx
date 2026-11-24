@@ -35,16 +35,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
   return (
     <>
       <header className="sticky top-0 z-40 bg-black/85 backdrop-blur-2xl border-b border-neutral-800/90 text-white shadow-[0_4px_24px_rgba(0,0,0,0.6)] transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
           {/* Brand Logo & iOS Table Pill */}
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2.5 group" title="Return to Lowkey Cafe Home">
-              <div className="w-10 h-10 rounded-2xl bg-yellow-400 flex items-center justify-center text-black font-black shadow-lg shadow-yellow-400/25 group-hover:scale-105 active:scale-95 transition-all duration-300">
-                <Coffee className="w-5 h-5 text-black stroke-[2.5]" />
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group" title="Return to Lowkey Cafe Home">
+              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-yellow-400 flex items-center justify-center text-black font-black shadow-lg shadow-yellow-400/25 group-hover:scale-105 active:scale-95 transition-all duration-300 shrink-0">
+                <Coffee className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-black stroke-[2.5]" />
               </div>
               <div>
-                <span className="font-display font-black text-xl tracking-tight text-white flex items-center gap-1">
+                <span className="font-display font-black text-sm sm:text-xl tracking-tight text-white flex items-center">
                   Lowkey<span className="text-yellow-400">Cafe</span>
                 </span>
                 <p className="text-[10px] text-neutral-400 tracking-wider uppercase font-semibold -mt-1 hidden sm:block">
@@ -55,25 +55,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
 
             {/* iOS Style Capsule: Takeaway or Table # */}
             {isTakeaway ? (
-              <div className="ml-2 px-3 py-1 rounded-full bg-yellow-400 text-black text-xs font-black flex items-center gap-1.5 shadow-md">
-                <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
+              <div className="ml-1 sm:ml-2 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-yellow-400 text-black text-[10px] sm:text-xs font-black flex items-center gap-1 shadow-md whitespace-nowrap shrink-0">
+                <ShoppingBag className="w-3 h-3 stroke-[2.5]" />
                 <span>Takeaway</span>
               </div>
             ) : tableNumber ? (
-              <div className="ml-2 px-3 py-1 rounded-full bg-yellow-400/15 border border-yellow-400/40 text-yellow-300 text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+              <div className="ml-1 sm:ml-2 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-yellow-400/15 border border-yellow-400/40 text-yellow-300 text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-yellow-400 animate-pulse"></span>
                 <span>Table {tableNumber}</span>
               </div>
             ) : null}
           </div>
 
           {/* Action Buttons with High-Contrast Black, Yellow & White Tone */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             
             {/* Wi-Fi Capsule */}
             <button
               onClick={() => setShowWifi(true)}
-              className="px-3 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95"
+              className="p-1.5 sm:px-3 sm:py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
               title="Restaurant Wi-Fi Info"
             >
               <Wifi className="w-3.5 h-3.5 text-yellow-400" />
@@ -83,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
             {/* In-App Table QR Camera Scanner Button */}
             <button
               onClick={() => setShowScanner(true)}
-              className="px-3.5 py-2 rounded-full bg-yellow-400/15 hover:bg-yellow-400/25 border border-yellow-400/40 text-yellow-300 hover:text-yellow-200 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              className="p-1.5 sm:px-3.5 sm:py-2 rounded-full bg-yellow-400/15 hover:bg-yellow-400/25 border border-yellow-400/40 text-yellow-300 hover:text-yellow-200 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm shrink-0"
               title="Scan Table QR Stand with Camera"
             >
               <Camera className="w-3.5 h-3.5 text-yellow-400 stroke-[2.5]" />
@@ -94,10 +94,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
             {!isTakeaway && tableNumber && (
               <button
                 onClick={() => setShowCallWaiter(true)}
-                className="px-3.5 py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all"
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-[11px] sm:text-xs font-black flex items-center gap-1 sm:gap-1.5 shadow-md shadow-yellow-400/20 active:scale-95 transition-all whitespace-nowrap shrink-0"
               >
                 <Bell className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Call Waiter</span>
+                <span className="whitespace-nowrap">Call Waiter</span>
               </button>
             )}
 
@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
             {activeOrderCode && (
               <button
                 onClick={() => navigate(`/order-tracking/${activeOrderCode}`)}
-                className="px-3.5 py-2 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                className="p-1.5 sm:px-3.5 sm:py-2 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
               >
                 <Clock className="w-3.5 h-3.5 animate-spin" />
                 <span className="hidden sm:inline">Track Order</span>
@@ -116,13 +116,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
             {onOpenCart && (
               <button
                 onClick={onOpenCart}
-                className="relative px-3.5 sm:px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-yellow-400/40 text-yellow-400 font-black transition-all shadow-md active:scale-95 flex items-center gap-2"
+                className="relative p-1.5 sm:px-4 sm:py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-yellow-400/40 text-yellow-400 font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5 shrink-0"
                 aria-label="View Cart"
               >
                 <ShoppingBag className="w-4 h-4 text-yellow-400 stroke-[2.5]" />
                 <span className="text-xs font-black hidden sm:inline text-white">Bag</span>
                 {itemCount > 0 && (
-                  <span className="bg-yellow-400 text-black text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                  <span className="bg-yellow-400 text-black text-[10px] sm:text-[11px] font-black w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shadow-md animate-bounce">
                     {itemCount}
                   </span>
                 )}

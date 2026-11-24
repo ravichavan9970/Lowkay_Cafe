@@ -14,6 +14,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     items,
     tableNumber,
     isTakeaway,
+    setTakeawayMode,
     updateQuantity,
     removeItem,
     clearCart,
@@ -106,6 +107,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       const effectiveTable = isTakeaway ? 0 : (tableNumber && Number(tableNumber) > 0 ? Number(tableNumber) : 10);
       const payload = {
         tableNumber: effectiveTable,
+        isTakeaway: Boolean(isTakeaway),
         customerName: customerName.trim() || (isTakeaway ? 'Takeaway Customer' : 'Guest Diner'),
         customerPhone: customerPhone.trim() || undefined,
         specialInstructions: isTakeaway
@@ -177,6 +179,35 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Dining Mode Quick Switcher */}
+          <div className="px-4 py-2.5 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between gap-2">
+            <span className="text-[11px] font-bold text-neutral-400">Order For:</span>
+            <div className="flex bg-black p-0.5 rounded-xl border border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setTakeawayMode(false)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  !isTakeaway
+                    ? 'bg-yellow-400 text-black font-black shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                🍽️ Dine-In
+              </button>
+              <button
+                type="button"
+                onClick={() => setTakeawayMode(true)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  isTakeaway
+                    ? 'bg-yellow-400 text-black font-black shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                🥡 Takeaway (0% Fee)
+              </button>
+            </div>
           </div>
 
           {/* Cart Items List */}

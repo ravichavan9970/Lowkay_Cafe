@@ -212,16 +212,25 @@ const generateOrderLocally = async (orderData: any): Promise<Order> => {
     return acc + food.price * (item.quantity || 1);
   }, 0);
   const taxAmount = Math.round(subtotal * 0.05 * 100) / 100;
-  const isTakeawayOrder = orderData.tableNumber === 0;
+  
+  const isTakeawayOrder =
+    orderData.tableNumber === 0 ||
+    orderData.tableNumber === null ||
+    orderData.tableNumber === undefined ||
+    Number(orderData.tableNumber) === 0 ||
+    orderData.isTakeaway === true ||
+    (typeof orderData.specialInstructions === 'string' && /takeaway/i.test(orderData.specialInstructions));
+
   const serviceCharge = isTakeawayOrder ? 0 : Math.round(subtotal * 0.05 * 100) / 100;
   const grandTotal = subtotal + taxAmount + serviceCharge;
 
   const newOrder: Order = {
     id: Date.now(),
     orderCode: randomCode,
-    tableNumber: orderData.tableNumber !== undefined ? orderData.tableNumber : 10,
+    tableNumber: isTakeawayOrder ? 0 : (orderData.tableNumber && Number(orderData.tableNumber) > 0 ? Number(orderData.tableNumber) : 10),
     customerName: orderData.customerName || (isTakeawayOrder ? 'Takeaway Customer' : 'Guest Diner'),
     customerPhone: orderData.customerPhone || '+91 98765 43210',
+    specialInstructions: orderData.specialInstructions || (isTakeawayOrder ? '[TAKEAWAY / TO-GO PICKUP]' : undefined),
     status: 'NEW_ORDER',
     subtotal,
     taxAmount,
@@ -232,12 +241,27 @@ const generateOrderLocally = async (orderData: any): Promise<Order> => {
     createdAt: new Date().toISOString(),
     items: (orderData.items || []).map((item: any, idx: number) => {
       const food = MOCK_FOOD_ITEMS.find((f) => f.id === item.foodItemId) || MOCK_FOOD_ITEMS[0];
+      
+      let stationId = 1;
+      const cat = (food.categoryName || '').toLowerCase();
+      if (cat.includes('beverage') || cat.includes('coffee') || cat.includes('tea') || cat.includes('drink')) {
+        stationId = 1; // Espresso Bar
+      } else if (cat.includes('burger') || cat.includes('pizza') || cat.includes('main') || cat.includes('hot')) {
+        stationId = 2; // Grill Station
+      } else if (cat.includes('dessert') || cat.includes('bakery') || cat.includes('pastry') || cat.includes('cake')) {
+        stationId = 3; // Bakery & Dessert
+      } else {
+        stationId = 4; // Cold Prep & Starters
+      }
+
       return {
         id: idx + 1,
         foodItemId: food.id,
         foodItemName: food.name,
         foodItemImage: food.imageUrl || '',
-        categoryName: 'Mains',
+        categoryName: food.categoryName || 'Mains',
+        stationId,
+        stationName: stationId === 1 ? 'Espresso Bar' : stationId === 2 ? 'Grill Station' : stationId === 3 ? 'Bakery' : 'Cold Prep',
         quantity: item.quantity || 1,
         unitPrice: food.price,
         subtotal: food.price * (item.quantity || 1),

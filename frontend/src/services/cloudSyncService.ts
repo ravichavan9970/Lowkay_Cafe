@@ -267,7 +267,11 @@ class CloudSyncService {
     // Publish to cloud for kitchen and waiter screens (non-blocking fire-and-forget)
     const event: OrderEvent = { action: 'CREATE', order: newOrder };
     this.broadcastToTabs('ORDER_EVENT', event);
-    this.publishToCloud(ORDERS_TOPIC, event, `New Order #${newOrder.orderCode} (Table ${newOrder.tableNumber})`);
+    const isTakeaway = newOrder.tableNumber === 0 || !newOrder.tableNumber;
+    const notifyTitle = isTakeaway
+      ? `New Order #${newOrder.orderCode} (Takeaway Pickup)`
+      : `New Order #${newOrder.orderCode} (Table ${newOrder.tableNumber})`;
+    this.publishToCloud(ORDERS_TOPIC, event, notifyTitle);
 
     this.notifyOrderListeners();
     return newOrder;
@@ -380,19 +384,16 @@ class CloudSyncService {
       }
     }
 
-    // Safety fallback poll every 15 seconds (only when SSE is not open)
+    // Active resilient polling every 2.5 seconds to guarantee cross-device sync
     if (!this.ordersPollTimer) {
       this.ordersPollTimer = setInterval(async () => {
-        if (this.ordersEventSource && this.ordersEventSource.readyState === 1) {
-          return;
-        }
         try {
           const fresh = await this.getOrders();
           this.notifyOrderListeners(fresh);
         } catch (e) {
-          console.warn('Periodic order poll error', e);
+          // ignore network glitch
         }
-      }, 15000);
+      }, 2500);
     }
 
     return () => {

@@ -17,6 +17,7 @@ import {
   Utensils,
   Layers,
   Sparkles,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface Station {
@@ -30,16 +31,41 @@ export const KDSView: React.FC = () => {
   const [selectedStation, setSelectedStation] = useState<number | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // Helper to identify takeaway orders safely
+  const isTakeawayOrder = (o: Order) => {
+    if (!o) return false;
+    return (
+      o.tableNumber === 0 ||
+      o.tableNumber === null ||
+      o.tableNumber === undefined ||
+      Number(o.tableNumber) === 0 ||
+      (typeof o.specialInstructions === 'string' && /takeaway|to-go|pickup/i.test(o.specialInstructions)) ||
+      (typeof o.customerName === 'string' && /takeaway/i.test(o.customerName))
+    );
+  };
+
   // Load stations & active kitchen orders
   const loadData = () => {
     kitchenApi.getStations().then((res) => setStations(Array.isArray(res.data) ? res.data : [])).catch(console.error);
-    kitchenApi.getOrders().then((res) => setOrders(Array.isArray(res.data) ? res.data : [])).catch(console.error);
+    kitchenApi.getOrders().then((res) => {
+      if (Array.isArray(res.data)) {
+        const active = res.data.filter(
+          (o) => o && o.status !== 'SERVED' && o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+        );
+        setOrders(active);
+      }
+    }).catch(console.error);
   };
 
   useEffect(() => {
     loadData();
 
-    // 1. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS in real time)
+    // 1. Resilient auto-polling every 2.5s (ensures mobile takeaway & table orders appear immediately)
+    const pollId = setInterval(() => {
+      loadData();
+    }, 2500);
+
+    // 2. Subscribe to live cloud orders (syncs across Mobile phones & Kitchen KDS in real time)
     const unsubCloud = cloudSync.subscribeToOrders((cloudOrders) => {
       setOrders((prev) => {
         const activeCloud = (cloudOrders || []).filter(
@@ -63,7 +89,7 @@ export const KDSView: React.FC = () => {
       });
     });
 
-    // 2. Subscribe to live kitchen updates via WebSocket
+    // 3. Subscribe to live kitchen updates via WebSocket
     const subId = wsService.subscribe('/topic/kitchen', (newOrUpdatedOrder: Order) => {
       console.log('⚡ KDS received WebSocket update:', newOrUpdatedOrder);
       setOrders((prev) => {
@@ -93,6 +119,7 @@ export const KDSView: React.FC = () => {
     });
 
     return () => {
+      clearInterval(pollId);
       unsubCloud();
       wsService.unsubscribe(subId);
     };
@@ -131,13 +158,22 @@ export const KDSView: React.FC = () => {
     }
   };
 
-  // Filter orders by station safely
+  // Filter orders by station or Takeaway filter safely
   const safeOrdersList = Array.isArray(orders) ? orders : [];
+  const takeawayCount = safeOrdersList.filter(isTakeawayOrder).length;
+
   const filteredOrders = safeOrdersList.filter((o) => {
     if (!o) return false;
-    if (!selectedStation) return true;
-    const items = Array.isArray(o.items) ? o.items : [];
-    return items.some((item) => item?.stationId === selectedStation);
+    // Dedicated Takeaway Filter
+    if (selectedStation === -1) {
+      return isTakeawayOrder(o);
+    }
+    // Specific kitchen station filter
+    if (selectedStation !== null) {
+      const items = Array.isArray(o.items) ? o.items : [];
+      return items.some((item) => !item?.stationId || item?.stationId === selectedStation);
+    }
+    return true; // All Orders
   });
 
   // Calculate elapsed time in minutes
@@ -150,8 +186,8 @@ export const KDSView: React.FC = () => {
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans">
       
       {/* Top Touchscreen Bar */}
-      <header className="h-16 bg-stone-900 border-b border-stone-800 px-4 sm:px-6 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+      <header className="h-16 bg-stone-900 border-b border-stone-800 px-3 sm:px-6 flex items-center justify-between shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <Link
             to="/admin"
             className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white transition-colors"
@@ -160,46 +196,65 @@ export const KDSView: React.FC = () => {
             <ArrowLeft className="w-5 h-5" />
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-brand-400 flex items-center justify-center">
-              <ChefHat className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-yellow-400/20 text-yellow-400 flex items-center justify-center shrink-0">
+              <ChefHat className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <span className="font-display font-extrabold text-lg text-white tracking-wide">
-                KITCHEN DISPLAY SYSTEM
+              <span className="font-display font-extrabold text-base sm:text-lg text-white tracking-wide">
+                KITCHEN DISPLAY
               </span>
-              <span className="text-[10px] text-amber-400/90 font-mono block -mt-1">
+              <span className="text-[10px] text-yellow-400 font-mono block -mt-1 hidden sm:block">
                 LOWKEY CAFE • LIVE TICKETS
               </span>
             </div>
           </div>
         </div>
 
-        {/* Station Tabs */}
-        <div className="hidden md:flex items-center gap-1.5 bg-stone-950 p-1 rounded-2xl border border-stone-800">
+        {/* Station & Takeaway Tabs */}
+        <div className="flex items-center gap-1.5 bg-stone-950 p-1 rounded-2xl border border-stone-800 overflow-x-auto no-scrollbar max-w-[60vw]">
           <button
             onClick={() => setSelectedStation(null)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               selectedStation === null
-                ? 'bg-brand-500 text-stone-950 shadow-md'
+                ? 'bg-yellow-400 text-black shadow-md font-black'
                 : 'text-stone-400 hover:text-white'
             }`}
           >
-            All Stations ({orders.length})
+            All ({orders.length})
           </button>
+
+          {/* Dedicated Takeaway Tab */}
+          <button
+            onClick={() => setSelectedStation(-1)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              selectedStation === -1
+                ? 'bg-yellow-400 text-black shadow-md font-black'
+                : 'text-yellow-400 hover:text-white bg-yellow-400/10 border border-yellow-400/30'
+            }`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Takeaway</span>
+            {takeawayCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-yellow-400 text-black text-[10px] font-black">
+                {takeawayCount}
+              </span>
+            )}
+          </button>
+
           {stations.map((st) => {
             const count = safeOrdersList.filter((o) => {
               if (!o) return false;
               const items = Array.isArray(o.items) ? o.items : [];
-              return items.some((i) => i?.stationId === st.id);
+              return items.some((i) => !i?.stationId || i?.stationId === st.id);
             }).length;
             return (
               <button
                 key={st.id}
                 onClick={() => setSelectedStation(st.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   selectedStation === st.id
-                    ? 'bg-brand-500 text-stone-950 shadow-md'
+                    ? 'bg-yellow-400 text-black shadow-md font-black'
                     : 'text-stone-400 hover:text-white'
                 }`}
               >
@@ -215,7 +270,7 @@ export const KDSView: React.FC = () => {
         </div>
 
         {/* Audio Toggle & Refresh */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className={`p-2 rounded-xl border text-xs font-bold transition-colors ${
@@ -240,8 +295,8 @@ export const KDSView: React.FC = () => {
             <h2 className="font-display font-extrabold text-2xl text-stone-200">
               Kitchen Screen Clear
             </h2>
-            <p className="text-xs text-stone-500 mt-1">
-              All station orders have been prepared and served. New customer orders will appear here automatically.
+            <p className="text-xs text-stone-500 mt-1 max-w-sm">
+              All station & takeaway orders have been prepared and served. New customer orders will appear here automatically.
             </p>
           </div>
         ) : (
@@ -249,6 +304,7 @@ export const KDSView: React.FC = () => {
             {filteredOrders.map((order) => {
               const elapsed = getElapsedMinutes(order.createdAt);
               const isDelayed = elapsed > 15;
+              const isTakeaway = isTakeawayOrder(order);
 
               return (
                 <div
@@ -256,6 +312,8 @@ export const KDSView: React.FC = () => {
                   className={`bg-stone-900 rounded-3xl border flex flex-col justify-between overflow-hidden shadow-xl transition-all ${
                     isDelayed
                       ? 'border-rose-500/80 shadow-rose-950/40 ring-2 ring-rose-500/30'
+                      : isTakeaway
+                      ? 'border-yellow-400/80 shadow-yellow-400/10 ring-1 ring-yellow-400/30'
                       : order.status === 'READY'
                       ? 'border-emerald-500/60 shadow-emerald-950/30'
                       : order.status === 'PREPARING'
@@ -268,6 +326,8 @@ export const KDSView: React.FC = () => {
                     className={`p-4 flex items-center justify-between border-b ${
                       isDelayed
                         ? 'bg-rose-950/40 border-rose-900/60'
+                        : isTakeaway
+                        ? 'bg-yellow-400/10 border-yellow-400/30'
                         : order.status === 'READY'
                         ? 'bg-emerald-950/40 border-emerald-900/60'
                         : 'bg-stone-850 border-stone-800'
@@ -275,15 +335,22 @@ export const KDSView: React.FC = () => {
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-display font-black text-2xl text-white">
-                          {order.tableNumber === 0 ? '🥡 TAKEAWAY' : `TBL #${order.tableNumber}`}
-                        </span>
+                        {isTakeaway ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-400 text-black text-xs font-black shadow-sm">
+                            <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>🥡 TAKEAWAY</span>
+                          </div>
+                        ) : (
+                          <span className="font-display font-black text-2xl text-white">
+                            TBL #{order.tableNumber}
+                          </span>
+                        )}
                         <span className="text-[11px] font-mono text-stone-400">
                           {order.orderCode}
                         </span>
                       </div>
-                      <span className="text-[10px] text-stone-400 block mt-0.5">
-                        Diner: {order.customerName}
+                      <span className="text-[10px] text-stone-400 block mt-1">
+                        Diner: <strong className="text-white">{order.customerName}</strong>
                       </span>
                     </div>
 
@@ -360,18 +427,19 @@ export const KDSView: React.FC = () => {
                     {order.status === 'NEW_ORDER' && (
                       <button
                         onClick={() => handleAdvanceStatus(order.id, 'ACCEPTED')}
-                        className="w-full py-3 rounded-2xl bg-brand-500 hover:bg-brand-400 text-stone-950 font-display font-extrabold text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all"
+                        className="w-full py-3 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-stone-950 font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-1.5"
                       >
-                        Accept Order
+                        <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                        <span>Accept {isTakeaway ? 'Takeaway' : 'Order'}</span>
                       </button>
                     )}
 
                     {order.status === 'ACCEPTED' && (
                       <button
                         onClick={() => handleAdvanceStatus(order.id, 'PREPARING')}
-                        className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-display font-extrabold text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
                       >
-                        <ChefHat className="w-4 h-4" />
+                        <ChefHat className="w-4 h-4 stroke-[2.5]" />
                         <span>Start Cooking</span>
                       </button>
                     )}
@@ -379,20 +447,20 @@ export const KDSView: React.FC = () => {
                     {order.status === 'PREPARING' && (
                       <button
                         onClick={() => handleAdvanceStatus(order.id, 'READY')}
-                        className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-display font-extrabold text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
                       >
-                        <Bell className="w-4 h-4" />
-                        <span>Mark Ready</span>
+                        <Bell className="w-4 h-4 stroke-[2.5]" />
+                        <span>{isTakeaway ? 'Pack & Mark Ready for Pickup' : 'Mark Ready'}</span>
                       </button>
                     )}
 
                     {order.status === 'READY' && (
                       <button
                         onClick={() => handleAdvanceStatus(order.id, 'SERVED')}
-                        className="w-full py-3 rounded-2xl bg-blue-500 hover:bg-blue-400 text-stone-950 font-display font-extrabold text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-2xl bg-blue-500 hover:bg-blue-400 text-white font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Mark Served</span>
+                        <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                        <span>{isTakeaway ? 'Handed to Customer (Complete)' : 'Mark Served'}</span>
                       </button>
                     )}
                   </div>

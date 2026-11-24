@@ -168,6 +168,17 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedTables(Restaurant restaurant) {
         if (tableRepository.count() == 0) {
+            // Seed Table #0 for Takeaway / Outside Pickup Counter
+            RestaurantTable takeawayCounter = RestaurantTable.builder()
+                    .restaurant(restaurant)
+                    .tableNumber(0)
+                    .seatingCapacity(0)
+                    .floorZone("Takeaway / Counter")
+                    .status("AVAILABLE")
+                    .isActive(true)
+                    .build();
+            tableRepository.save(takeawayCounter);
+
             for (int i = 1; i <= 10; i++) {
                 String zone = (i <= 4) ? "Indoor Lounge" : (i <= 8) ? "Patio Garden" : "Rooftop Terrace";
                 int capacity = (i % 3 == 0) ? 6 : (i % 2 == 0) ? 4 : 2;

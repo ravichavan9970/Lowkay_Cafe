@@ -134,42 +134,42 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-stone-900 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-white animate-in zoom-in-95 duration-200">
         
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {cashRequested ? (
           <div className="py-6 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto animate-pulse">
-              <Banknote className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-full bg-yellow-400/20 text-yellow-400 border border-yellow-400/30 flex items-center justify-center mx-auto animate-pulse">
+              <Banknote className="w-8 h-8 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="font-display font-extrabold text-xl text-stone-900">
+              <h3 className="font-display font-extrabold text-xl text-white">
                 Cash Collection Requested
               </h3>
-              <p className="text-xs text-stone-500 mt-1 max-w-xs mx-auto">
+              <p className="text-xs text-neutral-400 mt-1 max-w-xs mx-auto">
                 A request has been sent to your waiter to collect cash from <strong>Table #{bill.tableNumber}</strong>. Please have exact change ready.
               </p>
             </div>
 
-            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 text-left text-xs space-y-1.5">
-              <div className="flex justify-between font-semibold text-stone-700">
+            <div className="p-3.5 bg-neutral-950 rounded-2xl border border-neutral-800 text-left text-xs space-y-1.5">
+              <div className="flex justify-between font-semibold text-neutral-300">
                 <span>Bill Total:</span>
                 <span>₹{(bill?.finalPayableAmount ?? 0).toFixed(2)}</span>
               </div>
               {calculatedTip > 0 && (
-                <div className="flex justify-between text-stone-600">
+                <div className="flex justify-between text-neutral-400">
                   <span>Server Tip / Gratuity:</span>
                   <span>+₹{calculatedTip.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-black text-amber-900 pt-1.5 border-t border-amber-200/60 text-sm">
+              <div className="flex justify-between font-black text-yellow-400 pt-1.5 border-t border-neutral-800 text-sm">
                 <span>Total Cash to Hand:</span>
                 <span>₹{payableTotal.toFixed(2)}</span>
               </div>
@@ -178,9 +178,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <button
               onClick={handleCashConfirm}
               disabled={isProcessing}
-              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-98"
+              className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-98"
             >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />}
               <span>Cash Handed to Waiter (Complete)</span>
             </button>
           </div>
@@ -188,24 +188,24 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <>
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                <ShieldCheck className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div>
-                <h3 className="font-display font-extrabold text-xl text-stone-900">
+                <h3 className="font-display font-extrabold text-xl text-white">
                   Checkout & Payment
                 </h3>
-                <p className="text-xs text-stone-500">Bill #{bill.billNumber} • Table #{bill.tableNumber}</p>
+                <p className="text-xs text-neutral-400">Bill #{bill.billNumber} • Table #{bill.tableNumber}</p>
               </div>
             </div>
 
             {/* Tip Management */}
-            <div className="mb-5 bg-stone-50 p-3.5 rounded-2xl border border-stone-200">
+            <div className="mb-5 bg-neutral-950/70 p-3.5 rounded-2xl border border-neutral-800">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
                   <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> Add Server Gratuity / Tip
                 </span>
-                <span className="text-xs font-extrabold text-stone-900">
+                <span className="text-xs font-extrabold text-yellow-400">
                   {calculatedTip > 0 ? `+₹${calculatedTip}` : 'No tip'}
                 </span>
               </div>
@@ -221,8 +221,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     }}
                     className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
                       (pct === 0 && tipPercentage === null && !customTip) || tipPercentage === pct
-                        ? 'border-brand-500 bg-brand-500 text-stone-950 font-extrabold shadow-sm'
-                        : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                        ? 'border-yellow-400 bg-yellow-400 text-black font-black shadow-sm'
+                        : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700'
                     }`}
                   >
                     {pct === 0 ? 'None' : `${pct}%`}
@@ -233,7 +233,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {/* Payment Method Selector */}
             <div className="mb-5">
-              <label className="text-xs font-bold text-stone-700 block mb-2">
+              <label className="text-xs font-bold text-neutral-300 block mb-2">
                 Select Payment Method
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -242,11 +242,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   onClick={() => setSelectedMethod('UPI')}
                   className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all ${
                     selectedMethod === 'UPI'
-                      ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900 font-bold shadow-sm'
-                      : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                      ? 'border-yellow-400 bg-yellow-400/15 text-yellow-300 font-bold shadow-sm'
+                      : 'border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700'
                   }`}
                 >
-                  <QrCode className="w-5 h-5 text-emerald-600" />
+                  <QrCode className="w-5 h-5 text-yellow-400" />
                   <span className="text-xs">UPI QR</span>
                 </button>
 
@@ -255,11 +255,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   onClick={() => setSelectedMethod('CARD')}
                   className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all ${
                     selectedMethod === 'CARD'
-                      ? 'border-brand-500 bg-brand-50/60 text-brand-900 font-bold shadow-sm'
-                      : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                      ? 'border-yellow-400 bg-yellow-400/15 text-yellow-300 font-bold shadow-sm'
+                      : 'border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700'
                   }`}
                 >
-                  <CreditCard className="w-5 h-5 text-brand-600" />
+                  <CreditCard className="w-5 h-5 text-yellow-400" />
                   <span className="text-xs">Cards</span>
                 </button>
 
@@ -268,21 +268,21 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   onClick={() => setSelectedMethod('CASH')}
                   className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all ${
                     selectedMethod === 'CASH'
-                      ? 'border-amber-500 bg-amber-50/60 text-amber-900 font-bold shadow-sm'
-                      : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                      ? 'border-yellow-400 bg-yellow-400/15 text-yellow-300 font-bold shadow-sm'
+                      : 'border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700'
                   }`}
                 >
-                  <Banknote className="w-5 h-5 text-amber-600" />
+                  <Banknote className="w-5 h-5 text-yellow-400" />
                   <span className="text-xs">Cash</span>
                 </button>
               </div>
             </div>
 
             {/* Payment Method Details Preview */}
-            <div className="mb-5 bg-stone-50 p-4 rounded-2xl border border-stone-200">
+            <div className="mb-5 bg-neutral-950 p-4 rounded-2xl border border-neutral-800">
               {selectedMethod === 'UPI' && (
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-inner border border-stone-200 mb-2 flex items-center justify-center">
+                  <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-inner border border-neutral-700 mb-2 flex items-center justify-center">
                     {upiQrDataUrl ? (
                       <img
                         src={upiQrDataUrl}
@@ -290,44 +290,44 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         className="w-full h-full object-contain"
                       />
                     ) : (
-                      <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
                     )}
                   </div>
-                  <span className="text-[11px] font-mono text-stone-600 font-semibold">
+                  <span className="text-[11px] font-mono text-neutral-300 font-semibold">
                     UPI ID: lowkeycafe@upi
                   </span>
-                  <p className="text-[10px] text-stone-400 mt-0.5">Scan with Google Pay, PhonePe, Paytm, or CRED</p>
+                  <p className="text-[10px] text-neutral-500 mt-0.5">Scan with Google Pay, PhonePe, Paytm, or CRED</p>
                 </div>
               )}
 
               {selectedMethod === 'CARD' && (
                 <div className="space-y-2.5">
                   <div>
-                    <label className="text-[10px] font-bold text-stone-500 uppercase">Card Number</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase">Card Number</label>
                     <input
                       type="text"
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
-                      className="w-full text-xs font-mono p-2 rounded-xl border border-stone-200"
+                      className="w-full text-xs font-mono p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white focus:outline-none focus:border-yellow-400"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] font-bold text-stone-500 uppercase">Expiry</label>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Expiry</label>
                       <input
                         type="text"
                         value={cardExpiry}
                         onChange={(e) => setCardExpiry(e.target.value)}
-                        className="w-full text-xs font-mono p-2 rounded-xl border border-stone-200"
+                        className="w-full text-xs font-mono p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white focus:outline-none focus:border-yellow-400"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-stone-500 uppercase">CVV</label>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">CVV</label>
                       <input
                         type="password"
                         value={cardCvv}
                         onChange={(e) => setCardCvv(e.target.value)}
-                        className="w-full text-xs font-mono p-2 rounded-xl border border-stone-200"
+                        className="w-full text-xs font-mono p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white focus:outline-none focus:border-yellow-400"
                       />
                     </div>
                   </div>
@@ -336,10 +336,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
               {selectedMethod === 'CASH' && (
                 <div className="text-center py-2">
-                  <p className="text-xs text-stone-600 font-medium">
+                  <p className="text-xs text-neutral-300 font-medium">
                     Pay in cash directly to your server at Table #{bill.tableNumber}.
                   </p>
-                  <p className="text-[11px] text-stone-400 mt-1">Exact change is appreciated.</p>
+                  <p className="text-[11px] text-neutral-500 mt-1">Exact change is appreciated.</p>
                 </div>
               )}
             </div>
@@ -348,13 +348,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <button
               onClick={handleApplyTipAndPay}
               disabled={isProcessing}
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-stone-900 to-stone-800 hover:from-brand-600 hover:to-amber-500 text-white font-bold text-sm flex items-center justify-between shadow-xl transition-all active:scale-98 disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-between shadow-xl shadow-yellow-400/20 transition-all active:scale-98 disabled:opacity-50"
             >
               <span className="flex items-center gap-1.5">
-                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 text-emerald-400" />}
+                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <ShieldCheck className="w-4 h-4 text-black stroke-[2.5]" />}
                 {selectedMethod === 'CASH' ? `Request Waiter to Collect ₹${payableTotal.toFixed(2)} Cash` : `Pay ₹${payableTotal.toFixed(2)}`}
               </span>
-              <span className="text-xs text-amber-300 font-mono font-bold">100% Secure</span>
+              <span className="text-xs text-neutral-900 font-mono font-bold">100% Secure</span>
             </button>
           </>
         )}

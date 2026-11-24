@@ -65,38 +65,38 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-stone-900 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-white animate-in zoom-in-95 duration-200">
         
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-2xl bg-brand-500/20 text-brand-700 flex items-center justify-center">
-            <Users className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 flex items-center justify-center">
+            <Users className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
-            <h3 className="font-display font-extrabold text-lg text-stone-900">
+            <h3 className="font-display font-extrabold text-lg text-white">
               Split The Bill
             </h3>
-            <p className="text-xs text-stone-500">
-              Total Payable: <strong className="text-stone-900 font-bold">₹{bill.finalPayableAmount}</strong>
+            <p className="text-xs text-neutral-400">
+              Total Payable: <strong className="text-yellow-400 font-bold">₹{bill.finalPayableAmount}</strong>
             </p>
           </div>
         </div>
 
         {/* Tab selection: Equal vs Custom */}
-        <div className="flex bg-stone-100 p-1 rounded-xl mb-4">
+        <div className="flex bg-neutral-950 p-1 rounded-xl mb-4 border border-neutral-800">
           <button
             onClick={() => setSplitType('EQUAL')}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
               splitType === 'EQUAL'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-500 hover:text-stone-800'
+                ? 'bg-yellow-400 text-black font-black shadow-sm'
+                : 'text-neutral-400 hover:text-white'
             }`}
           >
             Equal Split
@@ -105,8 +105,8 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
             onClick={() => setSplitType('CUSTOM_AMOUNT')}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
               splitType === 'CUSTOM_AMOUNT'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-500 hover:text-stone-800'
+                ? 'bg-yellow-400 text-black font-black shadow-sm'
+                : 'text-neutral-400 hover:text-white'
             }`}
           >
             Custom Amount
@@ -116,7 +116,7 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
         {splitType === 'EQUAL' ? (
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-bold text-stone-700 block mb-1">
+              <label className="text-xs font-bold text-neutral-300 block mb-1">
                 Number of Diners
               </label>
               <div className="grid grid-cols-5 gap-2">
@@ -127,8 +127,8 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
                     onClick={() => handlePersonsCountChange(num)}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       numberOfPersons === num
-                        ? 'border-brand-500 bg-brand-50 text-brand-900'
-                        : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                        ? 'border-yellow-400 bg-yellow-400 text-black font-black shadow-sm'
+                        : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700'
                     }`}
                   >
                     {num}
@@ -137,36 +137,36 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
               </div>
             </div>
 
-            <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 text-center">
-              <span className="text-xs text-stone-500 block mb-1">Each Person Pays</span>
-              <span className="font-display font-black text-2xl text-brand-600">
+            <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 text-center">
+              <span className="text-xs text-neutral-400 block mb-1">Each Person Pays</span>
+              <span className="font-display font-black text-2xl text-yellow-400">
                 ₹{perPersonEqual.toFixed(2)}
               </span>
-              <p className="text-[11px] text-stone-400 mt-1">Split across {numberOfPersons} diners</p>
+              <p className="text-[11px] text-neutral-500 mt-1">Split across {numberOfPersons} diners</p>
             </div>
           </div>
         ) : (
           <div className="space-y-3 py-2 max-h-60 overflow-y-auto">
             {customAmounts.map((amt, idx) => (
               <div key={idx} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-stone-700 w-16">
+                <span className="text-xs font-bold text-neutral-300 w-16">
                   Person {idx + 1}
                 </span>
                 <div className="relative flex-1">
-                  <span className="absolute left-3 top-2.5 text-xs text-stone-400">₹</span>
+                  <span className="absolute left-3 top-2.5 text-xs text-neutral-500">₹</span>
                   <input
                     type="number"
                     step="0.01"
                     value={amt}
                     onChange={(e) => handleCustomAmountChange(idx, parseFloat(e.target.value) || 0)}
-                    className="w-full text-xs font-bold pl-7 pr-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-brand-500"
+                    className="w-full text-xs font-bold pl-7 pr-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-white focus:outline-none focus:border-yellow-400"
                   />
                 </div>
               </div>
             ))}
 
             <div className={`p-3 rounded-xl text-xs font-semibold flex items-center justify-between ${
-              Math.abs(customDifference) <= 0.1 ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'
+              Math.abs(customDifference) <= 0.1 ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-400' : 'bg-rose-500/15 border border-rose-500/40 text-rose-400'
             }`}>
               <span>Allocated: ₹{currentCustomSum.toFixed(2)}</span>
               <span>Remaining: ₹{customDifference.toFixed(2)}</span>
@@ -175,7 +175,7 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
         )}
 
         {errorMsg && (
-          <p className="text-[11px] text-rose-600 mt-3 flex items-center gap-1 font-medium">
+          <p className="text-[11px] text-rose-400 mt-3 flex items-center gap-1 font-medium">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errorMsg}
           </p>
         )}
@@ -183,9 +183,9 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
         <button
           onClick={handleSaveSplit}
           disabled={isSaving}
-          className="w-full mt-4 py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 disabled:opacity-50"
+          className="w-full mt-4 py-3 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-yellow-400/20 transition-all active:scale-98 disabled:opacity-50"
         >
-          <Check className="w-4 h-4" />
+          <Check className="w-4 h-4 stroke-[2.5]" />
           <span>Confirm Split</span>
         </button>
       </div>

@@ -34,12 +34,30 @@ public class OrderService {
 
     @Transactional
     public OrderDto.OrderResponse createOrder(OrderDto.CreateOrderRequest request) {
-        RestaurantTable table = tableRepository.findByTableNumber(request.getTableNumber())
-                .orElseThrow(() -> new IllegalArgumentException("Table #" + request.getTableNumber() + " not found"));
+        boolean isTakeaway = request.getTableNumber() == null || request.getTableNumber() <= 0;
+        RestaurantTable table;
+        if (isTakeaway) {
+            table = tableRepository.findByTableNumber(0)
+                    .orElseGet(() -> {
+                        Restaurant restaurant = restaurantRepository.findAll().stream().findFirst()
+                                .orElseGet(() -> restaurantRepository.save(Restaurant.builder().name("Lowkey Cafe").build()));
+                        return tableRepository.save(RestaurantTable.builder()
+                                .restaurant(restaurant)
+                                .tableNumber(0)
+                                .floorZone("Takeaway / Counter")
+                                .seatingCapacity(0)
+                                .status("AVAILABLE")
+                                .isActive(true)
+                                .build());
+                    });
+        } else {
+            table = tableRepository.findByTableNumber(request.getTableNumber())
+                    .orElseThrow(() -> new IllegalArgumentException("Table #" + request.getTableNumber() + " not found"));
+        }
 
         RestaurantSettings settings = settingsRepository.findFirstByOrderByUpdatedAtDesc().orElse(null);
         BigDecimal taxPercent = settings != null ? settings.getTaxPercentage() : new BigDecimal("5.00");
-        BigDecimal serviceChargePercent = settings != null ? settings.getServiceChargePercentage() : new BigDecimal("5.00");
+        BigDecimal serviceChargePercent = isTakeaway ? BigDecimal.ZERO : (settings != null ? settings.getServiceChargePercentage() : new BigDecimal("5.00"));
 
         // Customer Profile
         CustomerProfile customer = null;
@@ -182,11 +200,13 @@ public class OrderService {
 
         // Notify Kitchen, Waiters, and Admin
         notificationService.notifyOrderUpdate(responseDto, order.getOrderCode());
-        notificationService.notifyTableUpdate(table);
+        if (table != null && table.getTableNumber() > 0) {
+            notificationService.notifyTableUpdate(table);
+        }
         notificationService.saveAndBroadcastNotification(
                 "KITCHEN_STAFF",
-                "New Order " + order.getOrderCode(),
-                "Table #" + table.getTableNumber() + " placed an order for ₹" + grandTotal,
+                "New " + (isTakeaway ? "Takeaway Order " : "Order ") + order.getOrderCode(),
+                (isTakeaway ? "🥡 TAKEAWAY (Counter Pickup)" : "Table #" + table.getTableNumber()) + " placed an order for ₹" + grandTotal,
                 "NEW_ORDER",
                 order.getId()
         );
@@ -211,9 +231,9 @@ public class OrderService {
             case CANCELLED -> order.setCancelledAt(now);
         }
 
-        // Synchronize table status
+        // Synchronize table status (for actual dining tables, not takeaway counter)
         RestaurantTable table = order.getTable();
-        if (table != null) {
+        if (table != null && table.getTableNumber() > 0) {
             if (newStatus == OrderStatus.PREPARING) {
                 table.setStatus("PREPARING");
             } else if (newStatus == OrderStatus.READY) {
@@ -237,7 +257,7 @@ public class OrderService {
         OrderDto.OrderResponse response = mapOrderToDto(order);
 
         notificationService.notifyOrderUpdate(response, order.getOrderCode());
-        if (table != null) {
+        if (table != null && table.getTableNumber() > 0) {
             notificationService.notifyTableUpdate(table);
         }
 

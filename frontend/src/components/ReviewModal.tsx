@@ -25,11 +25,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ orderCode, onClose }) 
             key={star}
             type="button"
             onClick={() => setVal(star)}
-            className="p-1 text-stone-300 hover:text-amber-400 transition-colors"
+            className="p-1 text-neutral-700 hover:text-yellow-400 transition-colors"
           >
             <Star
               className={`w-6 h-6 ${
-                star <= val ? 'text-amber-400 fill-amber-400' : 'text-stone-200'
+                star <= val ? 'text-yellow-400 fill-yellow-400' : 'text-neutral-700'
               }`}
             />
           </button>
@@ -69,61 +69,61 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ orderCode, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-stone-900 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-white animate-in zoom-in-95 duration-200">
         
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {submitted ? (
           <div className="py-8 text-center space-y-3">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto animate-bounce">
-              <Sparkles className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-full bg-yellow-400/20 text-yellow-400 border border-yellow-400/30 flex items-center justify-center mx-auto animate-bounce">
+              <Sparkles className="w-8 h-8 stroke-[2.5]" />
             </div>
-            <h3 className="font-display font-extrabold text-xl text-stone-950">
+            <h3 className="font-display font-extrabold text-xl text-white">
               Thank You!
             </h3>
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-neutral-400">
               Your feedback helps Lowkey Cafe craft ever better artisan experiences.
             </p>
           </div>
         ) : (
           <>
             <div className="text-center mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto mb-2">
-                <Heart className="w-6 h-6 fill-amber-500" />
+              <div className="w-12 h-12 rounded-2xl bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 flex items-center justify-center mx-auto mb-2">
+                <Heart className="w-6 h-6 fill-yellow-400 stroke-[2]" />
               </div>
-              <h3 className="font-display font-extrabold text-lg text-stone-950">
+              <h3 className="font-display font-extrabold text-lg text-white">
                 Rate Your Experience
               </h3>
-              <p className="text-xs text-stone-500">Order Ref: {orderCode}</p>
+              <p className="text-xs text-neutral-400">Order Ref: {orderCode}</p>
             </div>
 
-            <div className="space-y-3.5 mb-5 bg-stone-50 p-4 rounded-2xl border border-stone-200">
+            <div className="space-y-3.5 mb-5 bg-neutral-950 p-4 rounded-2xl border border-neutral-800">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-700">Overall Rating</span>
+                <span className="text-xs font-bold text-neutral-300">Overall Rating</span>
                 {renderStarSelector(overallRating, setOverallRating)}
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-700">Food Quality</span>
+                <span className="text-xs font-bold text-neutral-300">Food Quality</span>
                 {renderStarSelector(foodRating, setFoodRating)}
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-700">Service</span>
+                <span className="text-xs font-bold text-neutral-300">Service</span>
                 {renderStarSelector(serviceRating, setServiceRating)}
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-700">Cleanliness</span>
+                <span className="text-xs font-bold text-neutral-300">Cleanliness</span>
                 {renderStarSelector(cleanlinessRating, setCleanlinessRating)}
               </div>
             </div>
 
             <div className="mb-5">
-              <label className="text-xs font-bold text-stone-700 block mb-1">
+              <label className="text-xs font-bold text-neutral-300 block mb-1">
                 Your Thoughts (Optional)
               </label>
               <textarea
@@ -131,23 +131,23 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ orderCode, onClose }) 
                 placeholder="What did you love? Any dishes you recommend?"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="w-full text-xs p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-brand-500 resize-none"
+                className="w-full text-xs p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-500 focus:outline-none focus:border-yellow-400 resize-none transition-colors"
               ></textarea>
             </div>
 
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-stone-900 to-stone-800 hover:from-brand-600 hover:to-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-yellow-400/20 transition-all active:scale-98 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-black" />
                   <span>Submitting Review...</span>
                 </>
               ) : (
                 <>
-                  <Star className="w-4 h-4" />
+                  <Star className="w-4 h-4 fill-black stroke-black" />
                   <span>Submit Rating</span>
                 </>
               )}
