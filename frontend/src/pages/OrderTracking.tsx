@@ -168,16 +168,6 @@ export const OrderTracking: React.FC = () => {
     }
   };
 
-  // Auto-advance simulation after 35s in PREPARING so diner is never stuck
-  useEffect(() => {
-    if (order?.status === 'PREPARING') {
-      const timer = setTimeout(() => {
-        handleFastForwardStatus();
-      }, 35000);
-      return () => clearTimeout(timer);
-    }
-  }, [order?.status]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
@@ -212,7 +202,8 @@ export const OrderTracking: React.FC = () => {
   const isTakeaway = order.tableNumber === 0;
   const statusSteps = isTakeaway ? TAKEAWAY_STATUS_STEPS : STATUS_STEPS;
   const currentStepIdx = statusSteps.findIndex((s) => s.status === order.status);
-  const isCompleted = order.status === 'COMPLETED' || order.status === 'SERVED' || (bill && bill.status === 'PAID');
+  // Order completion is determined by actual food preparation & handover, NOT by payment alone!
+  const isCompleted = order.status === 'COMPLETED' || order.status === 'SERVED';
   const isCancelled = order.status === 'CANCELLED';
 
   return (

@@ -8,8 +8,9 @@ const CLOUD_BROKERS = [
   'https://ntfy.adminforge.de',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
-const ORDERS_TOPIC = 'lowkey_cafe_orders_v3';
-const WAITER_TOPIC = 'lowkey_cafe_waiter_v3';
+const ORDERS_TOPIC = 'lowkey_cafe_orders_v4';
+const WAITER_TOPIC = 'lowkey_cafe_waiter_v4';
+const DISMISSED_ORDER_CODES = new Set(['ORD-556609', 'ORD-397384', 'ORD-255965']);
 
 interface OrderEvent {
   action: 'CREATE' | 'UPDATE_STATUS' | 'RECORD_PAYMENT';
@@ -30,6 +31,7 @@ class CloudSyncService {
   private ordersMap: Map<number, Order> = new Map();
   private waiterRequestsMap: Map<number, WaiterRequest> = new Map();
   private resolvedWaiterIds: Set<number> = new Set();
+  private dismissedOrderIds: Set<number> = new Set();
 
   private orderListeners: Array<(orders: Order[]) => void> = [];
   private waiterListeners: Array<(requests: WaiterRequest[]) => void> = [];
@@ -43,6 +45,7 @@ class CloudSyncService {
 
   constructor() {
     this.initResolvedIds();
+    this.initDismissedOrderIds();
     this.initCrossTabSync();
   }
 
@@ -50,7 +53,7 @@ class CloudSyncService {
     if (typeof window !== 'undefined') {
       try {
         if ('BroadcastChannel' in window) {
-          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v3');
+          this.broadcastChannel = new BroadcastChannel('lowkey_cafe_sync_v4');
           this.broadcastChannel.onmessage = (e) => {
             const data = e.data;
             if (!data) return;
@@ -72,7 +75,8 @@ class CloudSyncService {
           this.initResolvedIds();
           this.getWaiterRequests().then((reqs) => this.notifyWaiterListeners(reqs)).catch(console.error);
         }
-        if (e.key === 'lowkey_demo_orders' || e.key === 'lowkey_demo_bills') {
+        if (e.key === 'lowkey_demo_orders' || e.key === 'lowkey_demo_bills' || e.key === 'lowkey_dismissed_orders') {
+          this.initDismissedOrderIds();
           this.getOrders().then((ords) => this.notifyOrderListeners(ords)).catch(console.error);
         }
       });
@@ -134,6 +138,52 @@ class CloudSyncService {
       }
     } catch (e) {
       console.warn('Failed to load resolved waiter IDs', e);
+    }
+  }
+
+  private initDismissedOrderIds() {
+    try {
+      const raw = localStorage.getItem('lowkey_dismissed_orders');
+      if (raw) {
+        const ids = JSON.parse(raw);
+        if (Array.isArray(ids)) {
+          this.dismissedOrderIds = new Set(ids.map(Number));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load dismissed order IDs', e);
+    }
+  }
+
+  async dismissOrder(orderId: number): Promise<void> {
+    const numId = Number(orderId);
+    this.dismissedOrderIds.add(numId);
+    try {
+      localStorage.setItem('lowkey_dismissed_orders', JSON.stringify(Array.from(this.dismissedOrderIds)));
+    } catch (e) {}
+
+    this.ordersMap.delete(numId);
+
+    const localRaw = localStorage.getItem('lowkey_demo_orders');
+    const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
+    const nextLocal = localOrders.filter((o) => Number(o.id) !== numId);
+    localStorage.setItem('lowkey_demo_orders', JSON.stringify(nextLocal));
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: { id: numId, status: 'CANCELLED' } }));
+    }
+
+    const event: OrderEvent = { action: 'UPDATE_STATUS', orderId: numId, status: 'CANCELLED' };
+    this.broadcastToTabs('ORDER_EVENT', event);
+    this.publishToCloud(ORDERS_TOPIC, event, `Order Dismissed`);
+    this.notifyOrderListeners();
+  }
+
+  async clearAllTakeaways(): Promise<void> {
+    const orders = await this.getOrders();
+    const takeaways = orders.filter((o) => o.tableNumber === 0 || !o.tableNumber);
+    for (const t of takeaways) {
+      await this.dismissOrder(t.id);
     }
   }
 
@@ -219,9 +269,9 @@ class CloudSyncService {
       }
     }
 
-    const merged = Array.from(this.ordersMap.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const merged = Array.from(this.ordersMap.values())
+      .filter((o) => !this.dismissedOrderIds.has(Number(o.id)) && !DISMISSED_ORDER_CODES.has(o.orderCode))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     try {
       localStorage.setItem('lowkey_demo_orders', JSON.stringify(merged));
@@ -234,16 +284,26 @@ class CloudSyncService {
     if (!evt || !evt.action) return;
 
     if (evt.action === 'CREATE' && evt.order) {
-      this.ordersMap.set(evt.order.id, evt.order);
+      const numId = Number(evt.order.id);
+      if (!this.dismissedOrderIds.has(numId) && !DISMISSED_ORDER_CODES.has(evt.order.orderCode)) {
+        this.ordersMap.set(numId, evt.order);
+      }
     } else if (evt.action === 'UPDATE_STATUS' && evt.orderId && evt.status) {
-      const existing = this.ordersMap.get(evt.orderId);
-      if (existing) {
-        this.ordersMap.set(evt.orderId, { ...existing, status: evt.status });
+      const numId = Number(evt.orderId);
+      if (evt.status === 'CANCELLED') {
+        this.dismissedOrderIds.add(numId);
+        this.ordersMap.delete(numId);
+      } else {
+        const existing = this.ordersMap.get(numId);
+        if (existing) {
+          this.ordersMap.set(numId, { ...existing, status: evt.status });
+        }
       }
     } else if (evt.action === 'RECORD_PAYMENT' && evt.orderId) {
-      const existing = this.ordersMap.get(evt.orderId);
-      if (existing) {
-        this.ordersMap.set(evt.orderId, { ...existing, status: 'COMPLETED' });
+      const numId = Number(evt.orderId);
+      const existing = this.ordersMap.get(numId);
+      if (existing && (existing.status === 'READY' || existing.status === 'SERVED')) {
+        this.ordersMap.set(numId, { ...existing, status: 'COMPLETED' });
       }
     }
   }
@@ -557,7 +617,12 @@ class CloudSyncService {
     settledBills[bill.orderId] = paidBill;
     localStorage.setItem('lowkey_demo_bills', JSON.stringify(settledBills));
 
-    await this.updateOrderStatus(bill.orderId, 'COMPLETED');
+    // For active kitchen preparation, customer payment does NOT mean food is picked up or finished cooking!
+    // Only mark COMPLETED if the food was already SERVED or READY for pickup.
+    const currentOrder = this.ordersMap.get(Number(bill.orderId));
+    if (currentOrder && (currentOrder.status === 'READY' || currentOrder.status === 'SERVED')) {
+      await this.updateOrderStatus(bill.orderId, 'COMPLETED');
+    }
 
     // Auto-resolve any pending waiter calls or cash collection requests for this table
     try {
