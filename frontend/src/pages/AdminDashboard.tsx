@@ -290,7 +290,7 @@ export const AdminDashboard: React.FC = () => {
           <img
             src="/logo.png"
             alt="Lowkey Cafe Logo"
-            className="w-10 h-10 rounded-full object-cover shadow-md border border-stone-200 shrink-0"
+            className="w-10 h-10 object-contain shrink-0"
           />
           <div>
             <h1 className="font-display font-extrabold text-lg text-stone-950 flex items-center gap-2">

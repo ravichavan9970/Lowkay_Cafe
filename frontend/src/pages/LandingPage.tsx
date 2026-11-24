@@ -151,7 +151,7 @@ export const LandingPage: React.FC = () => {
             <img
               src="/logo.png"
               alt="Lowkey Cafe Logo"
-              className="w-11 h-11 rounded-full object-cover shadow-lg shadow-amber-500/25 border border-yellow-400/30"
+              className="w-11 h-11 object-contain shrink-0"
             />
             <div>
               <span className="font-display font-black text-xl tracking-tight text-white flex items-center gap-1">
@@ -631,7 +631,7 @@ export const LandingPage: React.FC = () => {
             <img
               src="/logo.png"
               alt="Lowkey Cafe Logo"
-              className="w-10 h-10 rounded-full object-cover shadow-md border border-yellow-400/30"
+              className="w-10 h-10 object-contain shrink-0"
             />
             <div>
               <span className="font-display font-black text-base text-white">

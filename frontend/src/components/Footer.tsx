@@ -9,7 +9,7 @@ export const Footer: React.FC = () => {
           <img
             src="/logo.png"
             alt="Lowkey Cafe Logo"
-            className="w-9 h-9 rounded-full object-cover shadow-md border border-yellow-400/30 shrink-0"
+            className="w-9 h-9 object-contain shrink-0"
           />
           <div>
             <span className="font-display font-black text-sm text-white">

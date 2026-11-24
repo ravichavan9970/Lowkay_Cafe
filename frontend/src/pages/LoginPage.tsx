@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
             <img
               src="/logo.png"
               alt="Lowkey Cafe Logo"
-              className="w-16 h-16 rounded-full object-cover shadow-xl border-2 border-yellow-400/40 group-hover:scale-105 active:scale-95 transition-all"
+              className="w-16 h-16 object-contain group-hover:scale-105 active:scale-95 transition-all"
             />
           </Link>
           <h2 className="font-display font-extrabold text-2xl text-white">

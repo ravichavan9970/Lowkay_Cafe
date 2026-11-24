@@ -43,7 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenCart }) => {
               <img
                 src="/logo.png"
                 alt="Lowkey Cafe Logo"
-                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover shadow-lg shadow-amber-500/20 group-hover:scale-105 active:scale-95 transition-all duration-300 shrink-0 border border-yellow-400/30"
+                className="w-9 h-9 sm:w-11 sm:h-11 object-contain group-hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
               />
               <div>
                 <span className="font-display font-black text-sm sm:text-xl tracking-tight text-white flex items-center">

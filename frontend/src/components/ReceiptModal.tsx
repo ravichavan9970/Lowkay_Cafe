@@ -167,7 +167,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <img
               src="/logo.png"
               alt="Lowkey Cafe Logo"
-              className="w-16 h-16 rounded-full mx-auto mb-2 object-cover shadow-md border-2 border-amber-500/30"
+              className="w-16 h-16 mx-auto mb-2 object-contain"
             />
             <h2 className="font-display font-extrabold text-2xl text-stone-950">
               Lowkey Cafe
