@@ -7,7 +7,6 @@ import {
   Bell,
   LayoutDashboard,
   ArrowRight,
-  UtensilsCrossed,
 } from 'lucide-react';
 
 interface ApplicationCard {
@@ -157,18 +156,6 @@ export const LandingPage: React.FC = () => {
               </div>
             );
           })}
-        </div>
-
-        {/* Quick Dine-In Table Helper Note */}
-        <div className="mt-8 text-center text-xs text-neutral-500 flex items-center justify-center gap-2 flex-wrap">
-          <UtensilsCrossed className="w-3.5 h-3.5 text-neutral-400 inline" />
-          <span>Sitting at a table in the cafe? Scan your table's QR sticker or</span>
-          <button
-            onClick={() => navigate('/table/1')}
-            className="text-[#FFD000] hover:underline font-semibold"
-          >
-            open Table 01 menu directly
-          </button>
         </div>
       </main>
 
