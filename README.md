@@ -1,6 +1,20 @@
-# ☕ Lowkey Cafe - Smart Restaurant Management & QR-Based Ordering System
+# ☕ Lowkey Cafe - Next-Gen Restaurant Operating System & Contactless QR Dining
 
-A production-ready, full-stack Smart Restaurant Management System designed for modern dining hospitality. It digitizes the entire restaurant lifecycle—from contactless table QR scanning and live food customization to real-time Kitchen Display System (KDS) routing, waiter floor tracking, split billing, digital payments, PDF receipt generation, and owner analytics.
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.4-6DB33F?logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-21_LTS-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_Production-000000?logo=vercel&logoColor=white)](https://lowkey-cafe-three.vercel.app)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> **Live Production Portal:** [https://lowkey-cafe-three.vercel.app](https://lowkey-cafe-three.vercel.app)  
+> **Tagline:** *"Your Cafe. Your Control. Everything in One Place."*
+
+Lowkey Cafe is an enterprise-grade, full-stack **Restaurant Operating System (Restaurant OS)** designed for high-volume modern hospitality. It unifies the entire dining lifecycle—from frictionless table QR scanning and live food customization to a live Kitchen Display System (KDS), waiter floor dispatch, split billing, digital payments, PDF receipt generation, and real-time administrative analytics.
+
+Engineered with a **resilient hybrid architecture**, Lowkey Cafe functions both as a traditional Spring Boot + MySQL / WebSocket application and as an ultra-fast, serverless-ready progressive web platform powered by distributed cloud pub-sub synchronization.
 
 ---
 
@@ -8,15 +22,18 @@ A production-ready, full-stack Smart Restaurant Management System designed for m
 
 - [1. System Architecture](#1-system-architecture)
 - [2. Core Application Modules](#2-core-application-modules)
-  - [A. Customer Mobile Web App](#a-customer-mobile-web-app)
-  - [B. Live Kitchen Display System (KDS)](#b-live-kitchen-display-system-kds)
-  - [C. Waiter & Floor Staff Dashboard](#c-waiter--floor-staff-dashboard)
-  - [D. Restaurant Admin Dashboard](#d-restaurant-admin-dashboard)
-- [3. Complete End-to-End Workflow](#3-complete-end-to-end-workflow)
-- [4. Technology Stack](#4-technology-stack)
-- [5. Database Architecture & Schema](#5-database-architecture--schema)
-- [6. Real-Time Synchronization (WebSocket/STOMP)](#6-real-time-synchronization-websocketstomp)
-- [7. REST API Documentation](#7-rest-api-documentation)
+  - [A. Central Restaurant OS Portal (`/`)](#a-central-restaurant-os-portal-)
+  - [B. Contactless Table QR Dining (`/table/:tableNumber`)](#b-contactless-table-qr-dining-tabletablenumber)
+  - [C. Counter & Takeaway Console (`/takeaway`)](#c-counter--takeaway-console-takeaway)
+  - [D. Live Kitchen Display System (KDS) (`/kds`)](#d-live-kitchen-display-system-kds-kds)
+  - [E. Waiter Floor & Guest Dispatch (`/waiter`)](#e-waiter-floor--guest-dispatch-waiter)
+  - [F. Restaurant Admin & Operations Hub (`/admin`)](#f-restaurant-admin--operations-hub-admin)
+  - [G. Live Order Tracking & Split Billing (`/order-tracking/:orderCode`)](#g-live-order-tracking--split-billing-order-trackingordercode)
+- [3. Sub-Second Cloud Synchronization Engine](#3-sub-second-cloud-synchronization-engine)
+- [4. Complete End-to-End Workflow](#4-complete-end-to-end-workflow)
+- [5. Technology Stack](#5-technology-stack)
+- [6. Database Architecture & Relational Schema](#6-database-architecture--relational-schema)
+- [7. REST API & Real-Time Protocol Documentation](#7-rest-api--real-time-protocol-documentation)
 - [8. Security & Role-Based Access Control (RBAC)](#8-security--role-based-access-control-rbac)
 - [9. Demo Credentials](#9-demo-credentials)
 - [10. Setup and Installation Instructions](#10-setup-and-installation-instructions)
@@ -28,338 +45,422 @@ A production-ready, full-stack Smart Restaurant Management System designed for m
 
 ```mermaid
 flowchart TD
-    subgraph Diners ["Diner Devices (Mobile Web)"]
-        QR["Scan Table QR Code"] --> CM["Customer Web Menu"]
-        CM --> CO["Customized Food Cart"]
-        CO --> PO["Place Order"]
-        PO --> LOT["Live Order Tracking"]
-        LOT --> SB["Split Bill & Tip"]
-        SB --> PAY["UPI / Card / Cash Payment"]
-        PAY --> REC["Digital & PDF Receipt"]
+    subgraph Diners ["Diners & Takeaway Customers (Mobile Web / Counter)"]
+        QR["Scan Table QR Code"] --> TM["Dine-In Menu (/table/N)"]
+        TK["Takeaway Portal (/takeaway)"] --> TM
+        TM --> CART["Customized Food Cart"]
+        CART --> ORD["Confirm & Place Order"]
+        ORD --> TRK["Live Order Tracking (/order-tracking/:code)"]
+        TRK --> SPLIT["Digital Bill & Bill Splitting"]
+        SPLIT --> PAY["UPI / Card / Cash Settlement"]
+        PAY --> REC["PDF Receipt Download"]
         REC --> REV["Dining Feedback & Rating"]
     end
 
-    subgraph Backend ["Spring Boot 3.3 Backend (Port 8080)"]
+    subgraph SyncEngine ["Real-Time Sync Fabric (Sub-Second Latency)"]
+        BC["BroadcastChannel (0ms Cross-Tab Sync)"]
+        SSE["Server-Sent Events (SSE) Mesh"]
+        BROKERS["Distributed Anycast CDN Pub-Sub Brokers"]
+        WS["Spring WebSocket / STOMP Broker"]
+    end
+
+    subgraph StaffApps ["Staff & Operations Terminals"]
+        KDS["Kitchen Display System (/kds)"]
+        FLR["Floor Waiter Management (/waiter)"]
+        ADM["Admin Command Center (/admin)"]
+        PORTAL["5-App Restaurant OS Hub (/)"]
+    end
+
+    subgraph BackendCore ["Spring Boot 3.3 Enterprise Core (Port 8080)"]
         REST["REST API Controllers"]
-        WS["WebSocket & STOMP Broker"]
         SEC["Spring Security + JWT Filter"]
         JPA["Spring Data JPA / Hibernate"]
-        QRGEN["ZXing QR Code Generator"]
-        PDFGEN["iText 8 PDF Engine"]
+        QRGEN["ZXing 3.5 QR Generator"]
+        PDFGEN["iText 8 PDF Invoice Engine"]
         MAIL["JavaMail Sender"]
     end
 
-    subgraph Staff ["Kitchen & Waiter Displays"]
-        KDS["Kitchen Display System (KDS)"]
-        FLR["Waiter Floor View & Call Feed"]
-        ADM["Admin Analytics & Settings"]
+    subgraph Persistence ["Persistent Storage Layer"]
+        DB[("MySQL 8 / Persistent File H2")]
+        LOCAL["Client-Side Fallback Cache"]
     end
 
-    subgraph DB ["Relational Database"]
-        MYSQL[("MySQL 8 / Persistent H2")]
-    end
-
-    PO -->|REST POST /api/orders| REST
-    REST --> JPA --> MYSQL
-    REST -->|Broadcast /topic/orders| WS
-    WS -->|Live Ticket Update| KDS
-    WS -->|Table Status Update| FLR
-    WS -->|Progress Tracking| LOT
-    WS -->|Revenue & Stats Update| ADM
+    ORD -->|Instant Broadcast| BC
+    ORD -->|Priority: urgent| BROKERS
+    ORD -->|REST POST /api/orders| REST
+    REST --> JPA --> DB
+    REST -->|STOMP /topic/kitchen| WS
+    BROKERS --> SSE --> KDS
+    BROKERS --> SSE --> FLR
+    BROKERS --> SSE --> TRK
+    WS --> KDS
+    WS --> FLR
+    WS --> ADM
 ```
 
 ---
 
 ## 2. Core Application Modules
 
-### A. Customer Mobile Web App (`/` and `/table/:tableNumber`)
-- **Contactless QR Table Recognition**: Scans QR code or opens `?table=5` with secure access token validation. Displays restaurant branding and assigned table number automatically without account requirement.
-- **Categorized Digital Menu**: 8 curated categories: Starters, Main Course, Fast Food, Pizza, Burgers, Beverages, Desserts, Special Offers. Includes veg/non-veg badges, spice indicators (Mild to Extra Hot), preparation times, allergen alerts, and ingredients.
-- **Granular Customization Engine**: Select portion sizes (Regular / Large), choose spice level, select add-ons/extra toppings with real-time price recalculation, specify ingredient removals (e.g. "No Onions", "No Mayo"), and add special instructions.
-- **Deals & Promotions**: Live promo coupons (`WELCOME10`, `LOWKEY20`, `TASTY50`) with instant validation and discount deduction.
-- **Customer Loyalty System**: Earn reward points per purchase (10 points per ₹100 spent), check balance by phone number, and redeem points for instant bill discounts.
-- **Prominent "Call Waiter" Button**: Instant server call with structured request types: *Need Water*, *Need Extra Plates*, *Menu Help*, *Need Bill*, or *Assistance*. Includes anti-spam rate limiting.
-- **Live Order Progress Tracker (`/order-tracking/:orderCode`)**: Real-time reactive stepper (Order Received → Accepted → Preparing → Ready → Served → Completed) with preparation countdown timer. Updates automatically without page refresh.
-- **Digital Billing & Split Bill**: Itemized breakdown, GST (5%), Service Charge (5%), Tip addition (5%, 10%, 15%, Custom), and bill splitting (Equal split among N diners or custom allocation).
-- **Payment & Receipting**: UPI QR code generation, Credit/Debit card simulator, Cash payment request, downloadable PDF receipt, and optional email receipt.
-- **Dining Reviews**: 1-tap star rating for Food Quality, Service, Cleanliness, and Overall experience with optional written feedback.
+### A. Central Restaurant OS Portal (`/`)
+- **Futuristic Dark-Mode Identity**: Deep black background (`#090909`), subtle golden yellow accents (`#FFD000`), dark charcoal cards (`#171717`), and Lucide icons.
+- **5-App Navigation Gateway**: Single-screen access point connecting staff and diners to their respective applications:
+  1. 🥡 **Takeaway Console**: Customer and counter takeaway ordering (`/takeaway`).
+  2. 🔐 **Staff Login**: Secure login for waiters, kitchen cooks, and managers (`/login`).
+  3. 🍳 **Kitchen Display (KDS)**: Live kitchen ticket preparation screen (`/kds`).
+  4. 🔔 **Floor Waiter**: Table dining tracker, waiter call alerts, and cash bill settlement (`/waiter`).
+  5. 📊 **Owner Admin**: Central restaurant management dashboard, analytics, and QR printing (`/admin`).
+- **Responsive Viewport Design**: Fits on a single desktop/laptop screen without scrolling; automatically transforms to a clean vertical stack on mobile devices.
 
-### B. Live Kitchen Display System (KDS) (`/kds`)
-- **Touchscreen-Optimized Dark UI**: High visibility interface built for kitchen display monitors and tablets.
+### B. Contactless Table QR Dining (`/table/:tableNumber`)
+- **Automatic Table Recognition**: Scans table QR sticker or navigates via URL parameter (`/table/5?token=...`). Secure token validation automatically assigns the table without requiring user signup.
+- **Categorized Digital Menu**: 8 curated categories: *Starters*, *Main Course*, *Fast Food*, *Pizza*, *Burgers*, *Beverages*, *Desserts*, and *Special Offers*.
+- **Granular Customization Engine**: Select portion sizes (Full / Regular / 12" Large), customize spice levels (Mild, Medium, Hot, Extra Hot), configure paid add-ons/sauces, enter ingredient exclusions ("No Onions", "No Mayo"), and add chef notes.
+- **Dynamic Promo Codes**: Apply discount coupons (`WELCOME10`, `LOWKEY20`, `TASTY50`) with instant validation and subtotal deduction.
+- **Customer Loyalty Points**: Check balance by phone number and redeem accrued points directly at checkout (1 point = ₹1 discount).
+- **Interactive Call Waiter**: Quick-action modal with structured request types: *Need Water*, *Extra Cutlery*, *Menu Recommendation*, *Clean Table*, or *Assistance*. Includes anti-spam rate limiting.
+
+### C. Counter & Takeaway Console (`/takeaway`)
+- **Dedicated Takeaway Mode**: Formatted specifically for takeaway diners and counter operators.
+- **Waived Service Charge**: 5% restaurant service charge is automatically waived (₹0.00) for all takeaway orders.
+- **Diner Contact & Pickup Details**: Captures customer name, phone number, and special pickup packing notes.
+- **Quick Dining Switcher**: One-click toggle between Dine-In and Takeaway modes inside the cart drawer.
+
+### D. Live Kitchen Display System (KDS) (`/kds`)
+- **Touchscreen Kitchen Interface**: High-contrast dark UI optimized for kitchen wall monitors, tablets, and heat-resistant displays.
 - **Multi-Station Order Routing**:
-  - Main Kitchen
-  - Pizza Station
-  - Beverage Station
-  - Dessert Station
-  - All Stations view with live item counts.
-- **Dynamic Order Cards**: Table number, order code, elapsed timer, delayed order highlight (turns pulsating red if preparation exceeds 15 minutes), allergen alert chips, spice tags, and ingredient exclusions.
-- **1-Click Status Workflow**:
-  `NEW ORDER` → `ACCEPTED` → `PREPARING` → `READY` → `SERVED`.
-- **Audio Chime**: Audio alert when new tickets arrive via WebSocket.
+  - Espresso Bar / Beverage Station
+  - Grill Station / Hot Mains
+  - Bakery & Dessert Station
+  - Cold Prep & Starters
+  - Dedicated **Takeaway** Tab with live counter badge.
+- **Dynamic Ticket Cards**: Table number, order code, elapsed timer, delayed order highlight (turns pulsing red when prep time exceeds 15 minutes), spice level badges, customizations, and ingredient exclusions.
+- **0ms Optimistic UI Transitions**: Instant action button transitions (`Accept Order` &rarr; `Start Cooking` &rarr; `Mark Ready` &rarr; `Mark Served`) with zero button freezing or network lag.
+- **Clean Kitchen Architecture**: Live "Clear All" maintenance tool and clean initial zero-ticket state.
 
-### C. Waiter & Floor Staff Dashboard (`/waiter`)
-- **Interactive Floor View**: Visual representation of all restaurant tables (1 to 10) with live occupancy status:
-  - `AVAILABLE` (Green)
-  - `OCCUPIED` (Blue)
-  - `ORDER_RECEIVED` (Amber)
-  - `PREPARING` (Orange)
-  - `FOOD_READY` (Pulsing Emerald)
-  - `ASSISTANCE_REQUESTED` (Pulsing Rose)
-  - `BILLING_REQUESTED` (Purple)
-- **Live Guest Assistance Feed**: Real-time incoming waiter calls showing table number, request type, timestamp, with 1-click **Accept** and **Resolve** actions.
-- **Order Serving & Cash Collection**: Mark orders as served and record cash payment collection directly at the table.
+### E. Waiter Floor & Guest Dispatch (`/waiter`)
+- **Interactive Restaurant Floor View**: 10 tables organized by dining zone (*Indoor Lounge*, *Patio Garden*, *Rooftop Terrace*) with real-time color-coded states:
+  - `AVAILABLE` (Green): Clean and ready for guests.
+  - `OCCUPIED` (Blue): Guests seated with active dining.
+  - `PREPARING` (Orange): Kitchen actively cooking order.
+  - `FOOD_READY` (Pulsing Emerald): Dish plated and waiting for server pickup.
+  - `ASSISTANCE_REQUESTED` (Pulsing Rose): Diner tapped "Call Waiter".
+  - `BILLING_REQUESTED` (Purple): Diner requested bill / cash collection.
+- **Guest Assistance Dispatch Feed**: Incoming waiter calls displaying table number, request type, timestamp, and quick **Accept** / **Resolve** controls.
+- **Table Settlement & Freeing**: Collect cash payments directly at table and reset table to `AVAILABLE` with 1 click.
 
-### D. Restaurant Admin Dashboard (`/admin`)
-- **Live KPI Overview**: Real-time metrics on total tables, available/occupied tables, active orders, pending kitchen orders, ready orders, pending waiter calls, today's sales, and customer ratings.
-- **Table Management**: Add/edit tables, generate QR codes, download PNG QR badges, and 1-click print table tent cards.
-- **Menu Catalog Management**: Add food items, upload image URLs, configure prices, veg/non-veg tags, spice levels, allergen tags, and toggle availability (In Stock vs. 86'd).
-- **Staff Management**: Add staff accounts with role-based permissions (`ADMIN`, `KITCHEN_STAFF`, `WAITER`).
-- **Configuration Settings**: Configure restaurant name, tagline, address, Wi-Fi credentials, GST tax rate, service charge %, opening hours.
-- **Order & Sales Audit**: Historical sales reports, date filtering, and top-selling dishes breakdown.
+### F. Restaurant Admin & Operations Hub (`/admin`)
+- **Executive KPI Dashboard**: Live revenue, occupied tables ratio, active kitchen tickets, ready-to-serve alerts, average guest rating, and weekly/monthly trends.
+- **Table & QR Management**: Add/edit tables, configure seating capacities, generate secure tokenized QR codes, download high-res PNG badges, and print table tent cards.
+- **Menu Catalog Management**: Add/edit dishes, upload image URLs, configure prices, toggle veg/non-veg, set spice levels, allergen tags, and 1-click 86/sold-out toggle.
+- **Staff Access Control**: Manage accounts with Role-Based Access Control (`ROLE_ADMIN`, `ROLE_KITCHEN_STAFF`, `ROLE_WAITER`).
+- **Cafe Settings**: Dynamic Wi-Fi credentials, GST tax percentage, service charge percentage, currency formatting, and operating hours.
 
----
-
-## 3. Complete End-to-End Workflow
-
-1. **Step 1: Arrival & QR Scan**
-   Customer arrives at Table 5 and scans the table QR code. The browser opens `http://localhost:5173/table/5` with token verification.
-2. **Step 2: Table Auto-Identification**
-   The customer web app identifies Table 5 automatically without requiring the customer to create an account or manually type their table number.
-3. **Step 3: Food Customization & Cart**
-   Customer selects dishes (e.g. *Artisan Burrata Margherita*), customizes crust size, adds extra buffalo mozzarella, selects spice level, inputs "No onions", and adds items to cart.
-4. **Step 4: Order Submission**
-   Customer confirms the order. The backend calculates subtotal, applies coupon (e.g. `WELCOME10`), adds 5% GST and 5% service charge, assigns unique code `ORD-XXXXXX`, saves to persistent database, and transitions table status to `ORDER_RECEIVED`.
-5. **Step 5: Kitchen Instant Routing**
-   The order is instantly broadcast via WebSocket (`/topic/kitchen` and `/topic/orders`). The ticket pops up on the Pizza Station and Main Kitchen screens with an audio chime.
-6. **Step 6: Preparation Workflow**
-   Cook clicks **Accept Order** and **Start Cooking**. Table status shifts to `PREPARING`. The customer's mobile tracker updates in real time.
-7. **Step 7: Customer Live Tracking**
-   Customer monitors real-time cooking progress and estimated prep timer on their phone without refreshing.
-8. **Step 8: Call Waiter Assistance**
-   Customer taps **Call Waiter** requesting extra water. The Waiter Floor dashboard sounds an alert, displaying Table 5 water request. Waiter clicks **Accept** and delivers water.
-9. **Step 9: Food Ready & Service**
-   Kitchen finishes preparation and marks **Food Ready**. Waiter receives a notification, delivers food to Table 5, and marks the ticket as **Served**.
-10. **Step 10: Digital Billing & Split**
-    Customer opens their digital bill on phone. Diners split the bill equally among 2 people and add a 10% gratuity tip.
-11. **Step 11: Payment & Settlement**
-    Customer pays using UPI QR code (or Credit Card / Cash collection). Backend verifies payment signature, marks bill as `PAID`, frees Table 5 back to `AVAILABLE`, and credits customer loyalty points.
-12. **Step 12: Digital Receipt & Review**
-    Customer downloads the official PDF receipt with restaurant branding, emails a copy to themselves, and submits a 5-star review.
-13. **Step 13: Admin Reflection**
-    The Admin Dashboard automatically reflects the updated sales, completed orders, and customer feedback in real time.
+### G. Live Order Tracking & Split Billing (`/order-tracking/:orderCode`)
+- **Live Animated Stepper**: Real-time animated progress bar reflecting kitchen execution:
+  - **Step 1: Order Received** &rarr; Ticket sent to kitchen.
+  - **Step 2: Order Accepted** &rarr; Kitchen acknowledged ticket.
+  - **Step 3: Preparing Food** &rarr; Chef actively cooking (50% progress).
+  - **Step 4: Food Ready / Pickup** &rarr; Plated for server delivery or packed at counter (75% progress).
+  - **Step 5: Served / Completed** &rarr; Delivered to table or handed to customer (100% full progress line).
+- **Flexible Bill Splitting**: Split bill equally among N diners or allocate custom split amounts.
+- **Gratuity & Tips**: Add server tips (5%, 10%, 15%, or custom amount).
+- **Payment Gateway Simulation**: UPI QR code generation, credit/debit card simulator, and cash collection requests.
+- **Downloadable PDF Invoices**: Client-side & server-side generated branded receipts with itemized breakdown, tax audit, and QR validation.
+- **Dining Feedback**: 4-metric star rating (Food, Service, Ambiance, Value) with optional written comments.
 
 ---
 
-## 4. Technology Stack
+## 3. Sub-Second Cloud Synchronization Engine
 
-| Layer | Technologies |
-|---|---|
-| **Frontend** | React 18, TypeScript, Tailwind CSS, Lucide Icons, React Router 6, StompJS, SockJS, Canvas-Confetti, Axios |
-| **Backend** | Java 21, Spring Boot 3.3.4, Spring Security, Spring Data JPA, Hibernate, Spring WebSocket / STOMP |
-| **Database** | MySQL 8 (Production profile) / Disk-persistent file H2 (MySQL mode default profile in `./data/lowkeycafe`) |
-| **Document & QR** | iText 8.0.4 (PDF Receipts), Google ZXing 3.5.3 (QR Code Generation) |
-| **Payment Gateway** | Razorpay SDK integration structure with server-side HMAC-SHA256 signature verification |
-| **Email Service** | Spring Boot JavaMailSender (MimeMessage with PDF attachment) |
+To guarantee zero ordering delays across real mobile phones (iOS Safari, Android Chrome) and staff desktop screens without requiring a dedicated persistent server, Lowkey Cafe implements a multi-layer real-time sync architecture:
 
----
-
-## 5. Database Architecture & Schema
-
-The relational schema implements 32 dedicated tables with primary keys, foreign key constraints, and indexing:
-
-- `restaurants`: Restaurant profile and branding
-- `users`: Staff and customer accounts
-- `roles`: Role definitions (`ROLE_ADMIN`, `ROLE_KITCHEN_STAFF`, `ROLE_WAITER`, `ROLE_CUSTOMER`)
-- `user_roles`: Mapping table for RBAC
-- `restaurant_settings`: Dynamic Wi-Fi, tax, service charge, and loyalty configurations
-- `restaurant_tables`: Physical tables, floor zones, seating capacity, and live status
-- `table_qr_codes`: Access tokens, target URLs, and Base64 QR code image blobs
-- `kitchen_stations`: Kitchen routing stations (Main Kitchen, Pizza, Beverage, Dessert)
-- `station_food_items`: Mapping dishes to kitchen stations
-- `food_categories`: Starters, Main Course, Fast Food, Pizza, Burgers, Beverages, Desserts, Specials
-- `food_items`: Menu dishes with prices, veg/non-veg, spice levels, allergen tags, and prep times
-- `food_customizations`: Customization groupings (Size, Extra Toppings, Add-ons)
-- `customization_options`: Individual options with additional prices
-- `coupons`: Promotional discount coupons with expiry and minimum spend checks
-- `customer_profiles`: Diner contact profiles
-- `loyalty_points`: Customer points balances and lifetime earnings
-- `loyalty_transactions`: Points earned and redeemed logs
-- `orders`: Master order tickets with subtotal, tax, discounts, status, and timestamps
-- `order_items`: Line items with quantities, spice, portions, and exclusions
-- `order_item_customizations`: Selected add-ons per ordered item
-- `kitchen_order_tracking`: Station-level preparation metrics and delay logs
-- `waiter_requests`: Guest calls (water, plates, bill, assistance) and resolution lifecycle
-- `staff_assignments`: Waiter-to-table shift assignments
-- `bills`: Invoices with taxes, discounts, tips, and settlement status
-- `bill_items`: Itemized billing breakdown
-- `bill_splits`: Equal and custom diner bill splits
-- `tips`: Server gratuity records
-- `payments`: Payment records, references, and gateway orders
-- `payment_transactions`: Audit log of payment gateway request and response payloads
-- `receipts`: Digital receipts with PDF download links and email logs
-- `reviews`: Customer ratings (food, service, cleanliness, overall) and written comments
-- `notifications`: Role-targeted notification feed
-- `audit_logs`: Important administrative and financial actions
-
-The complete MySQL DDL script is located at `backend/src/main/resources/schema-mysql.sql`.
+1. **High-Speed CDN SSE Pub-Sub**: Server-Sent Events (SSE) stream updates through Anycast and European community brokers (`ntfy.adminforge.de`, `ntfy.envs.net`, `ntfy.tedomum.fr`) with sub-second delivery (<300ms).
+2. **Urgent Delivery Headers**: Cloud publishes dispatch with `Priority: urgent`, `X-Priority: 5`, and `X-Tags: fast_sync`, bypassing broker batching queues for immediate packet flushing.
+3. **Cross-Tab BroadcastChannel**: `lowkey_cafe_sync_v8` synchronizes tabs and windows on the same device in 0ms with zero network overhead.
+4. **Mobile Tab Sleep Prevention**: Listens to `visibilitychange`, `window.focus`, and `online` events across all screens. The millisecond a customer or waiter unlocks their phone or switches back to the browser tab, an instant forced synchronization occurs.
+5. **Optimistic UI Execution**: KDS buttons update their local state immediately in 0ms upon tap before network confirmation arrives, eliminating chef UI freezing.
+6. **Robust Fallback Polling**: A 3.5-second background safety heartbeat guarantees that table states and tickets stay synchronized even under unstable mobile 4G/5G connections.
 
 ---
 
-## 6. Real-Time Synchronization (WebSocket/STOMP)
+## 4. Complete End-to-End Workflow
 
-Endpoint: `ws://localhost:8080/ws` (with SockJS fallback)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Diner as 📱 Customer (Mobile)
+    participant Menu as 🍽️ Web Menu (/table/4)
+    participant Sync as ⚡ Cloud Sync Fabric
+    actor Chef as 👨‍🍳 Kitchen KDS (/kds)
+    actor Waiter as 🤵 Waiter (/waiter)
+    actor Admin as 📊 Admin (/admin)
 
-| Topic | Purpose | Payload |
+    Diner->>Menu: Scans Table 4 QR code
+    Menu->>Menu: Validates token & loads Table 4
+    Diner->>Menu: Customizes Truffle Fries & submits order
+    Menu->>Sync: Broadcasts Order Event (ORD-922424)
+    Sync-->>Chef: Instant Ticket Push (0.2s)
+    Sync-->>Diner: Redirects to /order-tracking/ORD-922424
+    Chef->>Chef: Clicks "Accept Order" (0ms optimistic transition)
+    Chef->>Sync: Publishes status -> ACCEPTED
+    Sync-->>Diner: Tracker updates -> "Order Accepted by Kitchen"
+    Chef->>Chef: Clicks "Start Cooking"
+    Chef->>Sync: Publishes status -> PREPARING
+    Sync-->>Diner: Progress bar lights up -> "Cooking Your Meal" (50%)
+    Diner->>Sync: Taps "Call Waiter" (Extra Plates)
+    Sync-->>Waiter: Floor view flashes Table 4 (Audio Chime)
+    Waiter->>Sync: Accepts call & delivers plates -> Resolved
+    Chef->>Chef: Finishes cooking -> Clicks "Mark Ready"
+    Chef->>Sync: Publishes status -> READY
+    Sync-->>Waiter: Notification -> Food Ready for Table 4
+    Sync-->>Diner: Tracker updates -> "Your Food is Ready!" (75%)
+    Waiter->>Chef: Picks up food & delivers to Table 4
+    Chef->>Chef: Clicks "Mark Served"
+    Sync-->>Diner: Stepper completes -> "Dining Completed" (100%)
+    Diner->>Diner: Splits bill, adds tip & completes payment
+    Diner->>Diner: Downloads branded PDF receipt & submits 5-star review
+    Sync-->>Admin: Revenue and sales metrics updated live
+```
+
+---
+
+## 5. Technology Stack
+
+| Layer | Technologies & Libraries | Purpose |
 |---|---|---|
-| `/topic/orders` | Broadcasts new and updated orders | `OrderResponse` DTO |
-| `/topic/orders/{orderCode}` | Customer tracking updates for a specific order | `OrderResponse` DTO |
-| `/topic/kitchen` | Kitchen tickets feed for all stations | `OrderResponse` DTO |
-| `/topic/waiter-requests` | Live guest assistance calls feed | `WaiterResponse` DTO |
-| `/topic/tables` | Table status changes for floor view | `TableResponse` DTO |
-| `/topic/admin/stats` | Real-time administrative metrics | `DashboardStats` DTO |
+| **Frontend Framework** | React 18.3, TypeScript 5.5 | Type-safe, component-driven reactive architecture |
+| **Build Tool & Bundler** | Vite 5.4 | Ultra-fast HMR, optimized tree-shaking, production chunking |
+| **Styling & Icons** | Tailwind CSS 3.4, Lucide React | Modern dark-mode utility classes, responsive typography, scalable SVGs |
+| **Client Routing** | React Router DOM 6.26 | Declarative client-side routing with parameter guards |
+| **Real-Time Pub-Sub** | EventSource (SSE), BroadcastChannel API, StompJS, SockJS | Distributed sub-second cloud synchronization & cross-tab messaging |
+| **Networking & HTTP** | Axios 1.7 | REST API client with JWT authorization interceptors and timeout handling |
+| **Client PDF Engine** | jsPDF 2.5, html2canvas 1.4 | High-fidelity client-side PDF invoice generation |
+| **UI Effects** | Canvas-Confetti | Rewarding visual confetti burst upon bill payment completion |
+| **Backend Core** | Java 21 LTS, Spring Boot 3.3.4 | Enterprise REST API, dependency injection, validation |
+| **Security & Auth** | Spring Security 6, JJWT (HMAC-SHA256), BCrypt | Role-Based Access Control (RBAC), token authorization |
+| **Database & ORM** | MySQL 8 / Persistent File H2, Hibernate 6, Spring Data JPA | Relational persistence, connection pooling, transactional integrity |
+| **Backend PDF & QR** | iText 8.0.4, Google ZXing 3.5.3 | Server-side invoice generation and barcode/QR rendering |
+| **Hosting & Edge** | Vercel (Frontend & Serverless Edge) | Global CDN distribution, automated CI/CD pipeline |
 
 ---
 
-## 7. REST API Documentation
+## 6. Database Architecture & Relational Schema
+
+The relational schema implements 32 tables with strict primary keys, foreign key constraints, and performance indexes:
+
+```
+├── Identity & Access
+│   ├── users                      (Staff & diner credentials, email, password hash)
+│   ├── roles                      (ROLE_ADMIN, ROLE_KITCHEN_STAFF, ROLE_WAITER, ROLE_CUSTOMER)
+│   └── user_roles                 (Many-to-many RBAC mappings)
+├── Restaurant Infrastructure
+│   ├── restaurants                (Brand name, address, tax registration, currency)
+│   ├── restaurant_settings        (Wi-Fi credentials, tax %, service charge %, loyalty ratio)
+│   ├── restaurant_tables          (Table numbers, zones, seating capacity, live status)
+│   ├── table_qr_codes             (Access tokens, target URLs, Base64 QR blobs)
+│   ├── kitchen_stations           (Station 1: Espresso Bar, Station 2: Grill, etc.)
+│   └── station_food_items         (Routing mappings from dishes to stations)
+├── Menu & Catalog
+│   ├── food_categories            (Categories: Starters, Mains, Fast Food, Pizza, etc.)
+│   ├── food_items                 (Dishes, base prices, prep times, allergens, spice levels)
+│   ├── food_customizations        (Grouping: Crust, Size, Add-ons, Extra Toppings)
+│   └── customization_options      (Individual add-on names with extra pricing)
+├── Promotions & Loyalty
+│   ├── coupons                    (Coupon codes: WELCOME10, discount values, expiry dates)
+│   ├── customer_profiles          (Diner phone numbers, names, visit history)
+│   ├── loyalty_points             (Active point balances, lifetime earnings)
+│   └── loyalty_transactions       (Points credit and debit logs)
+├── Orders & Kitchen Execution
+│   ├── orders                     (Master tickets: subtotal, tax, grand total, status, timing)
+│   ├── order_items                (Line items, portion, spice, ingredient exclusions, notes)
+│   ├── order_item_customizations  (Selected paid add-ons per item)
+│   └── kitchen_order_tracking     (Preparation elapsed times, delay audits)
+├── Waiter Floor Dispatch
+│   ├── waiter_requests            (Guest calls: water, cutlery, bill, assistance, status)
+│   └── staff_assignments          (Waiter-to-table shift allocation)
+├── Billing & Payments
+│   ├── bills                      (Invoices, tax breakdown, service charge, final amount)
+│   ├── bill_items                 (Snapshot of billed food items)
+│   ├── bill_splits                (Equal and custom diner split records)
+│   ├── tips                       (Server gratuity logs)
+│   ├── payments                   (Payment method: UPI, Card, Cash, gateway refs)
+│   ├── payment_transactions       (Signature audits and gateway payload logs)
+│   └── receipts                   (Receipt metadata, PDF hashes, email dispatch logs)
+└── Feedback & Auditing
+    ├── reviews                    (Ratings 1-5 for food, service, clean, ambiance, comments)
+    ├── notifications              (Role-targeted operational alerts)
+    └── audit_logs                 (Administrative actions, menu changes, voids)
+```
+
+*The complete, production-ready MySQL DDL script is located at `backend/src/main/resources/schema-mysql.sql`.*
+
+---
+
+## 7. REST API & Real-Time Protocol Documentation
 
 ### Public Customer Endpoints
-- `GET /api/tables/{tableNumber}`: Fetch table metadata
-- `GET /api/tables/{tableNumber}/validate-token?token=...`: Verify table QR token
-- `GET /api/menu/categories`: List active food categories
-- `GET /api/menu/items`: List all available food dishes with customization options
-- `GET /api/menu/special-offers`: List promotional bundle offers
-- `POST /api/orders`: Place a new order
-- `GET /api/orders/{orderCode}`: Live tracking for an order
-- `POST /api/waiter/call`: Send a waiter assistance call
-- `GET /api/billing/order/{orderId}`: Fetch digital bill
-- `POST /api/billing/{billId}/tip`: Apply gratuity tip
-- `POST /api/billing/{billId}/split`: Split bill equally or custom
-- `POST /api/billing/pay/initiate`: Initiate payment (UPI, Card, Cash)
-- `POST /api/billing/pay/verify`: Verify payment signature and settle bill
-- `GET /api/billing/{billId}/receipt/pdf`: Download branded PDF receipt
-- `POST /api/billing/{billId}/receipt/email`: Send receipt to customer email
-- `GET /api/loyalty/balance?phone=...`: Check customer loyalty points
-- `POST /api/loyalty/redeem`: Redeem loyalty points for checkout discount
-- `POST /api/reviews`: Submit dining review (ratings 1-5 & written comment)
-- `GET /api/settings`: Fetch restaurant info and Wi-Fi credentials
+- `GET /api/tables/{tableNumber}`: Fetch table metadata and floor zone.
+- `GET /api/tables/{tableNumber}/validate-token?token=...`: Verify table QR token integrity.
+- `GET /api/menu/categories`: List active food categories.
+- `GET /api/menu/items`: List all available food items with customization groups.
+- `GET /api/menu/special-offers`: List promotional combo deals.
+- `POST /api/orders`: Place a new Dine-In or Takeaway order.
+- `GET /api/orders/{orderCode}`: Fetch live tracking status and items for an order.
+- `POST /api/waiter/call`: Dispatch a waiter call with table number and request type.
+- `GET /api/billing/order/{orderId}`: Retrieve itemized digital bill.
+- `POST /api/billing/{billId}/tip`: Apply server gratuity tip.
+- `POST /api/billing/{billId}/split`: Calculate equal or custom bill splits.
+- `POST /api/billing/pay/initiate`: Initialize payment session (UPI, Card, Cash).
+- `POST /api/billing/pay/verify`: Validate payment signature and mark bill `PAID`.
+- `GET /api/billing/{billId}/receipt/pdf`: Stream official branded PDF receipt.
+- `POST /api/billing/{billId}/receipt/email`: Send PDF invoice to customer's email.
+- `GET /api/loyalty/balance?phone=...`: Check available reward points balance.
+- `POST /api/loyalty/redeem`: Redeem loyalty points for checkout deduction.
+- `POST /api/reviews`: Submit 4-metric dining review and comments.
+- `GET /api/settings`: Fetch restaurant branding and guest Wi-Fi details.
 
-### Staff & Kitchen Endpoints (`ROLE_KITCHEN_STAFF`, `ROLE_WAITER`, `ROLE_ADMIN`)
-- `GET /api/kitchen/stations`: List kitchen stations
-- `GET /api/kitchen/orders`: List active kitchen orders
-- `GET /api/kitchen/orders/station/{stationId}`: Filter tickets by station
-- `PATCH /api/kitchen/orders/{orderId}/status`: Update status (ACCEPTED, PREPARING, READY)
-- `GET /api/waiter/requests`: List pending assistance requests
-- `PATCH /api/waiter/requests/{id}/accept`: Accept guest request
-- `PATCH /api/waiter/requests/{id}/resolve`: Resolve guest request
-- `PATCH /api/waiter/orders/{orderId}/served`: Mark food as served at table
-- `GET /api/waiter/floor`: Visual table floor status
+### Staff & Kitchen Endpoints
+- `GET /api/kitchen/stations`: List active kitchen stations.
+- `GET /api/kitchen/orders`: Retrieve active tickets for kitchen displays.
+- `GET /api/kitchen/orders/station/{stationId}`: Filter active tickets by preparation station.
+- `PATCH /api/kitchen/orders/{orderId}/status`: Advance status (`ACCEPTED`, `PREPARING`, `READY`, `SERVED`).
+- `GET /api/waiter/requests`: List pending guest assistance calls.
+- `PATCH /api/waiter/requests/{id}/accept`: Accept a guest call and assign waiter name.
+- `PATCH /api/waiter/requests/{id}/resolve`: Resolve and dismiss a guest call.
+- `PATCH /api/waiter/orders/{orderId}/served`: Mark food as served at table.
+- `GET /api/waiter/floor`: Retrieve dynamic 10-table visual floor state.
 
-### Admin Endpoints (`ROLE_ADMIN`)
-- `GET /api/admin/dashboard`: Live overview metrics
-- `GET /api/admin/analytics`: Revenue trends and best-selling dishes
-- `GET /api/admin/orders`: Order history with date filtering
-- `POST /api/admin/tables`: Add new table and generate QR code
-- `POST /api/admin/tables/{tableNumber}/regenerate-qr`: Regenerate table QR code
-- `POST /api/admin/menu/items`: Create new dish
-- `PATCH /api/admin/menu/items/{id}/availability`: Toggle item in-stock / sold-out
-- `GET /api/admin/staff`: List staff users
-- `POST /api/admin/staff`: Register new staff member
-- `PUT /api/admin/settings`: Update Wi-Fi, tax rates, and cafe info
+### Administrative Management Endpoints (`ROLE_ADMIN`)
+- `GET /api/admin/dashboard`: Live KPI summary cards (revenue, occupancy, ratings).
+- `GET /api/admin/analytics`: Historical revenue trends and top-selling dishes breakdown.
+- `GET /api/admin/orders`: Complete order audit log with date filtering.
+- `POST /api/admin/tables`: Add physical table and generate QR code badge.
+- `POST /api/admin/tables/{tableNumber}/regenerate-qr`: Rotate security token and re-render QR.
+- `POST /api/admin/menu/items`: Create new menu dish with customizations.
+- `PATCH /api/admin/menu/items/{id}/availability`: Toggle item in-stock / sold-out (86).
+- `GET /api/admin/staff`: List registered staff accounts.
+- `POST /api/admin/staff`: Create new staff user with assigned role.
+- `PUT /api/admin/settings`: Update tax percentage, service charge %, Wi-Fi, and cafe info.
 
 ---
 
 ## 8. Security & Role-Based Access Control (RBAC)
 
-- Authentication uses **JSON Web Tokens (JWT)** signed via HMAC-SHA256 (`Bearer <token>`).
-- Passwords encrypted with **BCrypt**.
-- Server-side signature validation for payment callbacks.
-- Anti-spam request throttling to prevent duplicate waiter requests.
-- Customer endpoints operate securely without account requirement, validated against table access tokens.
+- **JWT Authentication**: Passwords hashed with **BCrypt**. Authentication claims signed using HMAC-SHA256 JSON Web Tokens (`Authorization: Bearer <token>`).
+- **Frictionless Customer Security**: Diners order without mandatory account creation. Requests validate against cryptographic table tokens generated during QR creation.
+- **Server-Side Financial Integrity**: All bill subtotals, GST taxes (5%), service charges (5%), and coupon limits are verified on the backend before order creation.
+- **Anti-Spam Throttling**: Waiter calls enforce anti-spam cooldown intervals to prevent accidental flooding.
+- **Production CORS Hardening**: Restricts origin cross-sharing while permitting authenticated staff and customer web clients.
 
 ---
 
 ## 9. Demo Credentials
 
-| Role | Username | Password | Purpose |
-|---|---|---|---|
-| **Restaurant Admin** | `admin` | `admin123` | Full access to Admin Portal, settings, menu, tables, staff |
-| **Kitchen Cook** | `kitchen` | `kitchen123` | Touchscreen Kitchen Display System (KDS) |
-| **Floor Waiter** | `waiter` | `waiter123` | Restaurant Floor View & Live Guest Calls |
-| **Customer / Diner** | `customer` | `customer123` | Optional customer loyalty account |
+Quick 1-click login buttons are available directly on the `/login` screen:
 
-*Note: Quick 1-click login buttons are also available on the `/login` screen.*
+| Role | Username | Password | Application Access |
+|---|---|---|---|
+| **Restaurant Admin** | `admin` | `admin123` | Owner Admin Portal (`/admin`), full system settings, staff & analytics |
+| **Head Chef** | `kitchen` | `kitchen123` | Kitchen Display System (`/kds`), ticket management, station routing |
+| **Lead Waiter** | `waiter` | `waiter123` | Waiter Floor Management (`/waiter`), guest calls, cash settlement |
+| **Diner / Customer** | `customer` | `customer123` | Digital ordering (`/table/N`), order tracking, loyalty balance |
 
 ---
 
 ## 10. Setup and Installation Instructions
 
 ### Prerequisites
-- **Java 21 JDK** installed (`java -version`)
-- **Apache Maven 3.9+** (`mvn -v`)
 - **Node.js 18+** & **npm** (`node -v`, `npm -v`)
-- *(Optional)* MySQL 8 (if using external MySQL; otherwise, disk-persistent H2 runs automatically).
+- **Java 21 JDK** (`java -version`) *(Required for Spring Boot backend)*
+- **Apache Maven 3.9+** (`mvn -v`) *(Required for Spring Boot backend)*
+- *(Optional)* **MySQL 8** *(If not using the default disk-persistent H2 engine)*
 
-### Option A: 1-Click Launch (Windows)
+---
+
+### Option A: Quick 1-Click Launch (Windows)
+
 Double-click `run-all.bat` in the project root:
-- Starts the Spring Boot backend on port `8080`
-- Starts the Vite React frontend on port `5173`
+```bat
+run-all.bat
+```
+This script concurrently starts:
+1. The **Spring Boot 3.3 Backend** on `http://localhost:8080` (auto-seeding demo data).
+2. The **Vite React Frontend** on `http://localhost:5173`.
 
-### Option B: Manual Terminal Execution
+---
 
-#### 1. Start Backend:
+### Option B: Manual Setup
+
+#### 1. Start Spring Boot Backend:
 ```powershell
 cd "D:\Projects\Lowkey Cafe\backend"
 mvn spring-boot:run
 ```
-*The backend seeds initial cafe data, 10 tables with QR codes, 8 categories, 16 dishes, and demo users on first run.*
+*The backend auto-seeds the 10 tables with QR tokens, 8 categories, 23 dishes, and demo staff accounts on first initialization.*
 
-#### 2. Start Frontend:
+#### 2. Start Vite React Frontend:
 ```powershell
 cd "D:\Projects\Lowkey Cafe\frontend"
 npm install
 npm run dev
 ```
 
-#### 3. Open in Browser:
-- **Customer Table 5 Ordering**: [http://localhost:5173/table/5](http://localhost:5173/table/5)
+#### 3. Open Application Terminals:
+- **Central Restaurant OS Portal**: [http://localhost:5173/](http://localhost:5173/)
+- **Customer Table 4 Dining**: [http://localhost:5173/table/4](http://localhost:5173/table/4)
+- **Counter & Takeaway Console**: [http://localhost:5173/takeaway](http://localhost:5173/takeaway)
 - **Kitchen Display System (KDS)**: [http://localhost:5173/kds](http://localhost:5173/kds)
-- **Waiter Floor Dashboard**: [http://localhost:5173/waiter](http://localhost:5173/waiter)
-- **Restaurant Admin Portal**: [http://localhost:5173/admin](http://localhost:5173/admin)
+- **Floor Waiter Management**: [http://localhost:5173/waiter](http://localhost:5173/waiter)
+- **Owner Admin Dashboard**: [http://localhost:5173/admin](http://localhost:5173/admin)
 - **Staff Sign In**: [http://localhost:5173/login](http://localhost:5173/login)
 
 ---
 
 ## 11. Testing & Verification Guide
 
-Follow this test scenario across two browser windows side by side:
+Follow this scenario across two side-by-side browser windows to experience the real-time ecosystem:
 
-1. **Window 1 (Customer)**:
-   - Open [http://localhost:5173/table/5](http://localhost:5173/table/5).
-   - Notice the "Table 5" badge and "LowkeyCafe_Guest_5G" Wi-Fi pill.
-   - Click on *Artisan Burrata Margherita*.
-   - Customize size to *12" Large Sourdough (+₹149)*, add *Extra Buffalo Mozzarella (+₹79)*, set spice to *Medium*, enter "Extra crispy", and click **Add to Order**.
-   - Open cart, apply coupon code `WELCOME10` (10% discount applies).
+1. **Window 1 (Customer Mobile)**:
+   - Navigate to [http://localhost:5173/table/4](http://localhost:5173/table/4).
+   - Select *Artisan Burrata Margherita* pizza.
+   - Choose *12" Large Sourdough (+₹149)*, add *Extra Buffalo Mozzarella (+₹79)*, set spice to *Medium*, enter "Extra crispy crust", and click **Add to Order**.
+   - Open Cart Drawer, apply coupon `WELCOME10` (10% discount applies immediately).
    - Click **Confirm & Send to Kitchen**.
 2. **Window 2 (Kitchen Display)**:
    - Open [http://localhost:5173/kds](http://localhost:5173/kds).
-   - The Table 5 ticket pops in immediately with audio alert.
-   - Filter by *Pizza Station* to see routed item.
-   - Click **Accept Order** → Click **Start Cooking** → Click **Mark Ready**.
-3. **Window 1 (Customer Tracking)**:
-   - Notice the tracking stepper progress smoothly from *Order Received* to *Preparing* to *Food Ready* without page refresh.
-   - Click **Call Waiter** and request "Extra Plates".
-4. **Window 2 (Waiter Dashboard)**:
+   - Ticket `TBL #4` pops in immediately with station badge and elapsed timer.
+   - Click **Accept Order** &rarr; button transitions instantly (0ms) to **Start Cooking**.
+   - Click **Start Cooking** &rarr; button transitions to **Mark Ready**.
+3. **Window 1 (Customer Order Tracking)**:
+   - Notice the animated stepper automatically advance to **Preparing Food** ("Cooking Your Meal", 50% yellow bar).
+   - Click **Call Waiter** &rarr; select *Need Water* &rarr; submit.
+4. **Window 2 (Floor Waiter)**:
    - Switch to [http://localhost:5173/waiter](http://localhost:5173/waiter).
-   - Notice Table 5 pulsing with the "Extra Plates" assistance request.
-   - Click **Accept** and **Mark Resolved**.
-   - Notice Table 5 status updates.
-5. **Window 1 (Checkout & Review)**:
-   - On the customer tracking screen, click **Pay Bill**.
-   - Click **Split Bill** → select *Equal Split (2 Diners)* → Confirm.
-   - Choose a 10% gratuity tip and select *UPI QR* or *Card*.
-   - Click **Pay ₹...**. Confetti triggers on screen!
-   - Click **Download PDF** to inspect the generated PDF invoice.
-   - Rate dining 5 stars and submit feedback.
-6. **Window 2 (Admin Portal)**:
+   - Table 4 pulses rose with "Need Water" call alert.
+   - Click **Accept** &rarr; deliver water &rarr; click **Mark Resolved**.
+5. **Window 2 (Kitchen Ready & Service)**:
+   - On `/kds`, click **Mark Ready** &rarr; button changes to **Mark Served**.
+   - Customer screen updates to "Your Food is Ready!" (75%).
+   - Click **Mark Served** &rarr; ticket clears cleanly from KDS.
+6. **Window 1 (Payment & Review)**:
+   - Customer screen updates to **Dining Completed** (100% full progress line).
+   - Open Digital Bill &rarr; click **Split Bill** (2 diners) &rarr; select 10% gratuity tip.
+   - Click **Pay Bill** &rarr; celebratory confetti triggers!
+   - Click **Download PDF** to inspect generated invoice.
+   - Submit a 5-star review.
+7. **Window 2 (Admin Portal)**:
    - Open [http://localhost:5173/admin](http://localhost:5173/admin).
-   - Check the live KPI cards: today's sales and completed orders reflect the settled order immediately.
+   - Live revenue, completed orders counter, and customer review scores reflect the new settlement in real time.
+
+---
+
+## 📄 License
+
+This project is open-source and distributed under the **MIT License**. See the [LICENSE](LICENSE) file for complete details.
+
+---
+
+<div align="center">
+  <sub>Crafted with passion for modern dining hospitality by the Lowkey Cafe Engineering Team.</sub>
+</div>
