@@ -58,6 +58,19 @@ export const WaiterDashboard: React.FC = () => {
   useEffect(() => {
     loadFloor();
 
+    // 0. Fallback interval (3.5s) to guarantee floor always stays synced even on spotty Wi-Fi / mobile networks
+    const pollId = setInterval(() => {
+      loadFloor();
+    }, 3500);
+
+    const handleFloorWakeup = () => {
+      if (document.visibilityState === 'visible') {
+        loadFloor();
+      }
+    };
+    document.addEventListener('visibilitychange', handleFloorWakeup);
+    window.addEventListener('focus', handleFloorWakeup);
+
     // 1. Subscribe to live cloud orders (so tables update immediately when orders placed or advance)
     const unsubOrders = cloudSync.subscribeToOrders(() => {
       loadFloor();
@@ -124,6 +137,9 @@ export const WaiterDashboard: React.FC = () => {
     });
 
     return () => {
+      clearInterval(pollId);
+      document.removeEventListener('visibilitychange', handleFloorWakeup);
+      window.removeEventListener('focus', handleFloorWakeup);
       unsubOrders();
       unsubWaiter();
       window.removeEventListener('lowkey_waiter_update', handleSync);

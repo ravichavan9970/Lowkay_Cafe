@@ -1,12 +1,13 @@
 import { Order, OrderStatus, WaiterRequest, Bill, Table } from '../types';
 import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
-// High-speed, unblocked community brokers with global access & SSE
+// High-speed Anycast global CDN broker with instant SSE & community fallbacks
 const CLOUD_BROKERS = [
-  'https://ntfy.projectsegfau.lt',
+  'https://ntfy.sh',
   'https://ntfy.adminforge.de',
   'https://ntfy.envs.net',
   'https://ntfy.tedomum.fr',
+  'https://ntfy.projectsegfau.lt',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
 const ORDERS_TOPIC = 'lowkey_cafe_orders_v7_clean';
@@ -133,6 +134,10 @@ class CloudSyncService {
         fetch(`${broker}/${topic}`, {
           method: 'POST',
           headers: {
+            'Priority': 'urgent',
+            'X-Priority': '5',
+            'X-Tags': 'fast_sync',
+            'Cache-Control': 'no-cache',
             ...(title ? { Title: title } : {}),
           },
           body: jsonBody,
@@ -186,6 +191,7 @@ class CloudSyncService {
     } catch (e) {}
 
     this.ordersMap.delete(numId);
+    this.lastOrdersFetchTime = 0;
 
     const localRaw = localStorage.getItem('lowkey_demo_orders');
     const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
@@ -269,8 +275,8 @@ class CloudSyncService {
     });
 
     const now = Date.now();
-    // Return cached orders immediately if fetched within the last 8 seconds unless forced
-    if (!force && this.lastOrdersFetchTime > 0 && now - this.lastOrdersFetchTime < 8000) {
+    // Return cached orders immediately if fetched within the last 1000ms unless forced
+    if (!force && this.lastOrdersFetchTime > 0 && now - this.lastOrdersFetchTime < 1000) {
       return Array.from(this.ordersMap.values())
         .filter((o) => !this.dismissedOrderIds.has(Number(o.id)) && !DISMISSED_ORDER_CODES.has(o.orderCode))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -360,6 +366,7 @@ class CloudSyncService {
       if (evt.status === 'CANCELLED') {
         this.dismissedOrderIds.add(numId);
         this.ordersMap.delete(numId);
+    this.lastOrdersFetchTime = 0;
       } else {
         const existing = this.ordersMap.get(numId);
         if (existing) {
@@ -382,6 +389,7 @@ class CloudSyncService {
    */
   async createOrder(newOrder: Order): Promise<Order> {
     this.ordersMap.set(newOrder.id, newOrder);
+    this.lastOrdersFetchTime = 0;
 
     // Save order locally
     const localRaw = localStorage.getItem('lowkey_demo_orders');
@@ -478,6 +486,7 @@ class CloudSyncService {
     }
 
     this.ordersMap.set(numId, updatedOrder);
+    this.lastOrdersFetchTime = 0;
 
     // Save locally
     const localRaw = localStorage.getItem('lowkey_demo_orders');
@@ -507,35 +516,57 @@ class CloudSyncService {
     // Initial load
     this.getOrders().then(callback).catch(console.error);
 
-    // Start SSE listener if in browser and not yet open
-    if (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined') {
-      if (!this.ordersEventSource) {
-        try {
-          this.ordersEventSource = new EventSource(`${PRIMARY_BROKER}/${ORDERS_TOPIC}/sse`);
-          this.ordersEventSource.onmessage = (e) => {
-            try {
-              const data = JSON.parse(e.data);
-              if (data.event === 'message') {
-                const payload = this.parsePayload<OrderEvent>(data.message);
-                if (payload) {
-                  this.applyOrderEvent(payload);
-                  this.notifyOrderListeners();
-                }
-              }
-            } catch (err) {
-              console.warn('SSE order parse error', err);
+    const initSSE = () => {
+      if (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined') {
+        if (!this.ordersEventSource || this.ordersEventSource.readyState === EventSource.CLOSED) {
+          try {
+            if (this.ordersEventSource) {
+              try { this.ordersEventSource.close(); } catch (e) {}
             }
-          };
-          this.ordersEventSource.onerror = () => {
-            // Native EventSource auto-reconnects
-          };
-        } catch (e) {
-          console.warn('Could not establish SSE connection for orders', e);
+            this.ordersEventSource = new EventSource(`${PRIMARY_BROKER}/${ORDERS_TOPIC}/sse`);
+            this.ordersEventSource.onmessage = (e) => {
+              try {
+                const data = JSON.parse(e.data);
+                if (data.event === 'message') {
+                  const payload = this.parsePayload<OrderEvent>(data.message);
+                  if (payload) {
+                    this.applyOrderEvent(payload);
+                    this.notifyOrderListeners();
+                    if (typeof window !== 'undefined' && payload.order) {
+                      window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: payload.order }));
+                    }
+                  }
+                }
+              } catch (err) {
+                console.warn('SSE order parse error', err);
+              }
+            };
+            this.ordersEventSource.onerror = () => {
+              // Native EventSource auto-reconnects
+            };
+          } catch (e) {
+            console.warn('Could not establish SSE connection for orders', e);
+          }
         }
       }
+    };
+
+    initSSE();
+
+    // Instant mobile refresh: when screen unlocks or user returns to tab
+    const handleOrderWakeup = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      initSSE();
+      this.getOrders(true).then((ords) => this.notifyOrderListeners(ords)).catch(() => {});
+    };
+
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', handleOrderWakeup);
+      window.addEventListener('focus', handleOrderWakeup);
+      window.addEventListener('online', handleOrderWakeup);
     }
 
-    // Relaxed resilient polling (25 seconds) to prevent 429 broker limits while guaranteeing sync
+    // Ultra-responsive fallback polling (3.5s) to guarantee instant sync across mobile & desktop
     if (!this.ordersPollTimer) {
       this.ordersPollTimer = setInterval(async () => {
         try {
@@ -544,11 +575,16 @@ class CloudSyncService {
         } catch (e) {
           // ignore network glitch
         }
-      }, 25000);
+      }, 3500);
     }
 
     return () => {
       this.orderListeners = this.orderListeners.filter((l) => l !== callback);
+      if (typeof window !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleOrderWakeup);
+        window.removeEventListener('focus', handleOrderWakeup);
+        window.removeEventListener('online', handleOrderWakeup);
+      }
       if (this.orderListeners.length === 0) {
         if (this.ordersPollTimer) {
           clearInterval(this.ordersPollTimer);
@@ -819,7 +855,7 @@ class CloudSyncService {
     }
 
     const now = Date.now();
-    if (!force && this.lastWaiterFetchTime > 0 && now - this.lastWaiterFetchTime < 8000) {
+    if (!force && this.lastWaiterFetchTime > 0 && now - this.lastWaiterFetchTime < 1000) {
       return Array.from(this.waiterRequestsMap.values())
         .filter((r) => !this.resolvedWaiterIds.has(r.id) && r.status !== 'RESOLVED')
         .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
@@ -912,6 +948,7 @@ class CloudSyncService {
    */
   async callWaiter(req: WaiterRequest): Promise<WaiterRequest> {
     this.waiterRequestsMap.set(req.id, req);
+    this.lastWaiterFetchTime = 0;
 
     // Save locally
     const raw = localStorage.getItem('lowkey_demo_waiter_requests');
@@ -940,6 +977,7 @@ class CloudSyncService {
     if (req) {
       req = { ...req, status: 'IN_PROGRESS', assignedWaiterName: waiterName };
       this.waiterRequestsMap.set(id, req);
+      this.lastWaiterFetchTime = 0;
     }
 
     // Save locally
@@ -969,6 +1007,7 @@ class CloudSyncService {
   async resolveWaiterRequest(id: number): Promise<void> {
     this.saveResolvedId(id);
     this.waiterRequestsMap.delete(id);
+    this.lastWaiterFetchTime = 0;
 
     // Filter out permanently from local storage
     const raw = localStorage.getItem('lowkey_demo_waiter_requests');
@@ -996,50 +1035,75 @@ class CloudSyncService {
 
     this.getWaiterRequests().then(callback).catch(console.error);
 
-    if (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined') {
-      if (!this.waiterEventSource) {
-        try {
-          this.waiterEventSource = new EventSource(`${PRIMARY_BROKER}/${WAITER_TOPIC}/sse`);
-          this.waiterEventSource.onmessage = (e) => {
-            try {
-              const data = JSON.parse(e.data);
-              if (data.event === 'message') {
-                const payload = this.parsePayload<WaiterEvent>(data.message);
-                if (payload) {
-                  this.applyWaiterEvent(payload);
-                  this.notifyWaiterListeners();
-                }
-              }
-            } catch (err) {
-              console.warn('SSE waiter parse error', err);
+    const initWaiterSSE = () => {
+      if (typeof window !== 'undefined' && typeof window.EventSource !== 'undefined') {
+        if (!this.waiterEventSource || this.waiterEventSource.readyState === EventSource.CLOSED) {
+          try {
+            if (this.waiterEventSource) {
+              try { this.waiterEventSource.close(); } catch (e) {}
             }
-          };
-          this.waiterEventSource.onerror = () => {
-            // Auto-reconnects
-          };
-        } catch (e) {
-          console.warn('Could not establish SSE connection for waiter requests', e);
+            this.waiterEventSource = new EventSource(`${PRIMARY_BROKER}/${WAITER_TOPIC}/sse`);
+            this.waiterEventSource.onmessage = (e) => {
+              try {
+                const data = JSON.parse(e.data);
+                if (data.event === 'message') {
+                  const payload = this.parsePayload<WaiterEvent>(data.message);
+                  if (payload) {
+                    this.applyWaiterEvent(payload);
+                    this.notifyWaiterListeners();
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('lowkey_waiter_update'));
+                    }
+                  }
+                }
+              } catch (err) {
+                console.warn('SSE waiter parse error', err);
+              }
+            };
+            this.waiterEventSource.onerror = () => {
+              // Auto-reconnects
+            };
+          } catch (e) {
+            console.warn('Could not establish SSE connection for waiter requests', e);
+          }
         }
       }
+    };
+
+    initWaiterSSE();
+
+    // Mobile wakeup listener: when phone is unlocked or browser tab focused
+    const handleWaiterWakeup = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      initWaiterSSE();
+      this.getWaiterRequests(true).then((reqs) => this.notifyWaiterListeners(reqs)).catch(() => {});
+    };
+
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', handleWaiterWakeup);
+      window.addEventListener('focus', handleWaiterWakeup);
+      window.addEventListener('online', handleWaiterWakeup);
     }
 
-    // Safety fallback poll every 15 seconds (only when SSE is not open)
+    // Safety fallback poll every 3.5 seconds
     if (!this.waiterPollTimer) {
       this.waiterPollTimer = setInterval(async () => {
-        if (this.waiterEventSource && this.waiterEventSource.readyState === 1) {
-          return;
-        }
         try {
-          const fresh = await this.getWaiterRequests();
+          const fresh = await this.getWaiterRequests(true);
           this.notifyWaiterListeners(fresh);
         } catch (e) {
-          console.warn('Periodic waiter poll error', e);
+          // ignore network glitch
         }
-      }, 15000);
+      }, 3500);
     }
 
     return () => {
       this.waiterListeners = this.waiterListeners.filter((l) => l !== callback);
+      if (typeof window !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleWaiterWakeup);
+        window.removeEventListener('focus', handleWaiterWakeup);
+        window.removeEventListener('online', handleWaiterWakeup);
+      }
       if (this.waiterListeners.length === 0) {
         if (this.waiterPollTimer) {
           clearInterval(this.waiterPollTimer);

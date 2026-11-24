@@ -61,10 +61,18 @@ export const KDSView: React.FC = () => {
   useEffect(() => {
     loadData();
 
-    // 1. Fallback background sync (12s relaxed interval; real-time updates come via SSE & BroadcastChannel)
+    // 1. Fallback background sync (3.5s ultra-fast interval; real-time updates come via SSE & BroadcastChannel)
     const pollId = setInterval(() => {
       loadData();
-    }, 12000);
+    }, 3500);
+
+    const handleWakeup = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleWakeup);
+    window.addEventListener('focus', handleWakeup);
 
     // 2. Local instant update listener (0ms latency across same-device tabs)
     const handleLocalOrder = (e: any) => {
@@ -141,6 +149,8 @@ export const KDSView: React.FC = () => {
 
     return () => {
       clearInterval(pollId);
+      document.removeEventListener('visibilitychange', handleWakeup);
+      window.removeEventListener('focus', handleWakeup);
       window.removeEventListener('lowkey_order_update', handleLocalOrder);
       unsubCloud();
       wsService.unsubscribe(subId);

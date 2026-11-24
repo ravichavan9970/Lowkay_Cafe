@@ -75,18 +75,19 @@ export const OrderTracking: React.FC = () => {
   useEffect(() => {
     fetchOrder();
 
-    // 1. Refresh on tab focus (instant mobile refresh when returning to screen)
+    // 1. Refresh on tab focus & visibility (instant mobile refresh when returning to screen)
     const handleFocus = () => {
       fetchOrder();
     };
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
 
-    // 2. Fallback heartbeat (20s relaxed interval to prevent any broker 429 rate limit)
+    // 2. Fallback heartbeat (3.5s interval to guarantee immediate sync across mobile and kitchen)
     const pollId = setInterval(() => {
       if (orderCode) {
         fetchOrder();
       }
-    }, 20000);
+    }, 3500);
 
     // 3. Real-time cloud subscription (instant cross-device SSE sync)
     const unsubCloud = cloudSync.subscribeToOrders((orders) => {
@@ -132,6 +133,7 @@ export const OrderTracking: React.FC = () => {
     return () => {
       clearInterval(pollId);
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
       unsubCloud();
       wsService.unsubscribe(subId);
       window.removeEventListener('lowkey_order_update', handleOrderSync);
