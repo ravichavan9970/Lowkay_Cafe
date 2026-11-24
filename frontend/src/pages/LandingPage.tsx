@@ -182,10 +182,10 @@ export const LandingPage: React.FC = () => {
               <span>Takeaway Order</span>
             </button>
             <button
-              onClick={() => navigate('/login')}
-              className="px-3 sm:px-4 py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
+              onClick={() => navigate('/portal')}
+              className="px-3.5 sm:px-4 py-2 rounded-full bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black flex items-center gap-1.5 shadow-lg shadow-yellow-400/20 active:scale-95 transition-all"
             >
-              <span>Staff Login</span>
+              <span>Staff Portal</span>
               <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
           </div>
@@ -648,11 +648,7 @@ export const LandingPage: React.FC = () => {
             <a href="#why-us" className="hover:text-yellow-400 transition-colors">Why Lowkey</a>
             <a href="#ambiance" className="hover:text-yellow-400 transition-colors">Ambiance</a>
             <a href="#visit" className="hover:text-yellow-400 transition-colors">Hours & Location</a>
-            <button onClick={() => navigate('/takeaway')} className="hover:text-yellow-400 transition-colors">Takeaway</button>
-            <button onClick={() => navigate('/login')} className="hover:text-yellow-400 transition-colors">Staff Login</button>
-            <button onClick={() => navigate('/kds')} className="hover:text-yellow-400 transition-colors">Kitchen Display</button>
-            <button onClick={() => navigate('/waiter')} className="hover:text-yellow-400 transition-colors">Floor Waiter</button>
-            <button onClick={() => navigate('/admin')} className="hover:text-yellow-400 transition-colors">Owner Admin</button>
+            <button onClick={() => navigate('/portal')} className="text-neutral-500 hover:text-yellow-400 text-xs font-semibold transition-colors">Staff Portal</button>
           </div>
         </div>
       </footer>

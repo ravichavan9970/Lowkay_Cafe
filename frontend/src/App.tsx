@@ -9,6 +9,7 @@ import KDSView from './pages/KDSView';
 import WaiterDashboard from './pages/WaiterDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
+import StaffPortal from './pages/StaffPortal';
 import ScreenSwitcher from './components/ScreenSwitcher';
 
 export const App: React.FC = () => {
@@ -33,8 +34,10 @@ export const App: React.FC = () => {
             {/* Restaurant Admin Dashboard */}
             <Route path="/admin" element={<AdminDashboard />} />
 
-            {/* Authentication */}
+            {/* Authentication & Operations Portal */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/portal" element={<StaffPortal />} />
+            <Route path="/staff" element={<StaffPortal />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
