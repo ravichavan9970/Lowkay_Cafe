@@ -222,7 +222,7 @@ export const KDSView: React.FC = () => {
               <ChefHat className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <span className="font-display font-extrabold text-base sm:text-lg text-white tracking-wide">
+              <span className="font-display font-extrabold text-xs sm:text-lg text-white tracking-wide">
                 KITCHEN DISPLAY
               </span>
               <span className="text-[10px] text-yellow-400 font-mono block -mt-1 hidden sm:block">

@@ -105,83 +105,111 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
     },
   ];
 
-  if (isCollapsed) {
-    return (
-      <button
-        onClick={onToggle}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-50 h-20 w-6 sm:w-7 bg-black/95 hover:bg-neutral-900 border-y border-r border-neutral-750 hover:border-yellow-400/60 rounded-r-2xl flex flex-col items-center justify-center gap-1 shadow-2xl transition-all group cursor-pointer"
-        title="Expand Left Navigation Bar"
-        aria-label="Expand Left Navigation Bar"
-      >
-        <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
-        <ChevronRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-yellow-400 transition-colors" />
-      </button>
-    );
-  }
-
   return (
-    <aside
-      aria-label="Quick Navigation Sidebar"
-      className="fixed left-0 top-0 bottom-0 z-40 w-16 sm:w-20 bg-black/95 backdrop-blur-2xl border-r border-neutral-800/90 flex flex-col items-center justify-between py-4 shadow-2xl select-none"
-    >
-      {/* Top: Clean Cafe Emblem */}
-      <div className="flex flex-col items-center gap-2">
-        <Link to="/portal" title="Lowkey Cafe Operations Portal" className="group">
-          <img
-            src="/logo.png"
-            alt="Lowkey Cafe"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain group-hover:scale-105 transition-transform"
-          />
-        </Link>
-        <div className="w-8 h-px bg-neutral-850"></div>
-      </div>
-
-      {/* Middle: Vertical Navigation (Up to Down) */}
-      <div className="flex flex-col items-center gap-2 w-full px-2">
+    <>
+      {/* 1. Mobile Bottom Navigation Bar (< sm) */}
+      <nav
+        aria-label="Staff Mobile Bottom Bar"
+        className="fixed bottom-0 inset-x-0 h-14 bg-black/95 backdrop-blur-2xl border-t border-neutral-800 z-50 flex sm:hidden items-center justify-around px-2 shadow-2xl select-none"
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-
           return (
             <button
               key={item.id}
               onClick={() => handleSwitch(item.id)}
-              className={`group w-full aspect-square max-w-[54px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-95 cursor-pointer ${
+              className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 active:scale-95 ${
                 isActive
-                  ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/25 font-black'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-850/80 font-bold'
+                  ? 'bg-yellow-400 text-black font-black shadow-md shadow-yellow-400/25'
+                  : 'text-neutral-400 hover:text-white font-semibold'
               }`}
-              title={item.label}
-              aria-pressed={isActive}
             >
-              <Icon
-                className={`w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2] transition-transform ${
-                  isActive ? 'text-black scale-105' : 'group-hover:text-yellow-400 group-hover:scale-105'
-                }`}
-              />
-              <span className="text-[9px] uppercase tracking-tight leading-none text-center">
+              <Icon className="w-4 h-4 stroke-[2.2]" />
+              <span className="text-[9px] uppercase tracking-tight leading-none">
                 {item.shortLabel}
               </span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      {/* Bottom: Collapse Button */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="w-8 h-px bg-neutral-850"></div>
-        {onToggle && (
-          <button
-            onClick={onToggle}
-            className="p-2 rounded-xl text-neutral-500 hover:text-yellow-400 hover:bg-neutral-850 transition-colors cursor-pointer"
-            title="Collapse Sidebar"
-            aria-label="Collapse Sidebar"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-    </aside>
+      {/* 2. Desktop Left Navigation Rail (>= sm) */}
+      {isCollapsed ? (
+        <button
+          onClick={onToggle}
+          className="hidden sm:flex fixed left-0 top-1/2 -translate-y-1/2 z-50 h-20 w-6 sm:w-7 bg-black/95 hover:bg-neutral-900 border-y border-r border-neutral-750 hover:border-yellow-400/60 rounded-r-2xl flex-col items-center justify-center gap-1 shadow-2xl transition-all group cursor-pointer"
+          title="Expand Left Navigation Bar"
+          aria-label="Expand Left Navigation Bar"
+        >
+          <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
+          <ChevronRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-yellow-400 transition-colors" />
+        </button>
+      ) : (
+        <aside
+          aria-label="Quick Navigation Sidebar"
+          className="hidden sm:flex fixed left-0 top-0 bottom-0 z-40 w-16 sm:w-20 bg-black/95 backdrop-blur-2xl border-r border-neutral-800/90 flex-col items-center justify-between py-4 shadow-2xl select-none"
+        >
+          {/* Top: Clean Cafe Emblem */}
+          <div className="flex flex-col items-center gap-2">
+            <Link to="/portal" title="Lowkey Cafe Operations Portal" className="group">
+              <img
+                src="/logo.png"
+                alt="Lowkey Cafe"
+                className="w-9 h-9 sm:w-10 sm:h-10 object-contain group-hover:scale-105 transition-transform"
+              />
+            </Link>
+            <div className="w-8 h-px bg-neutral-850"></div>
+          </div>
+
+          {/* Middle: Vertical Navigation (Up to Down) */}
+          <div className="flex flex-col items-center gap-2 w-full px-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleSwitch(item.id)}
+                  className={`group w-full aspect-square max-w-[54px] rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-95 cursor-pointer ${
+                    isActive
+                      ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/25 font-black'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-850/80 font-bold'
+                  }`}
+                  title={item.label}
+                  aria-pressed={isActive}
+                >
+                  <Icon
+                    className={`w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2] transition-transform ${
+                      isActive ? 'text-black scale-105' : 'group-hover:text-yellow-400 group-hover:scale-105'
+                    }`}
+                  />
+                  <span className="text-[9px] uppercase tracking-tight leading-none text-center">
+                    {item.shortLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom: Collapse Button */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-px bg-neutral-850"></div>
+            {onToggle && (
+              <button
+                onClick={onToggle}
+                className="p-2 rounded-xl text-neutral-500 hover:text-yellow-400 hover:bg-neutral-850 transition-colors cursor-pointer"
+                title="Collapse Sidebar"
+                aria-label="Collapse Sidebar"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </aside>
+      )}
+    </>
   );
 };
 

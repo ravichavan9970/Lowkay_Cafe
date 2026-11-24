@@ -154,7 +154,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="absolute inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
         <div className="w-screen max-w-md bg-neutral-950 text-white border-l border-neutral-800 flex flex-col shadow-2xl">
           
           {/* Header */}

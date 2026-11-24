@@ -297,7 +297,7 @@ export const OrderTracking: React.FC = () => {
                         <Icon className="w-4 h-4 stroke-[2.5]" />
                       </div>
                       <span
-                        className={`text-[10px] sm:text-xs font-bold mt-2 max-w-[60px] sm:max-w-none leading-tight ${
+                        className={`text-[9px] sm:text-xs font-bold mt-1.5 sm:mt-2 max-w-[54px] sm:max-w-none leading-tight ${
                           isCurrent
                             ? 'text-yellow-400 font-extrabold'
                             : isDone

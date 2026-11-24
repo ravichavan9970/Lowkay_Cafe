@@ -304,38 +304,38 @@ export const WaiterDashboard: React.FC = () => {
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans">
       
       {/* Top Bar */}
-      <header className="h-16 bg-stone-900/90 backdrop-blur-xl border-b border-stone-800 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-lg sticky top-0 z-20">
-        <div className="flex items-center gap-3">
+      <header className="h-16 bg-stone-900/90 backdrop-blur-xl border-b border-stone-800 px-3 sm:px-6 flex items-center justify-between shrink-0 shadow-lg sticky top-0 z-20">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/admin"
-            className="p-2 rounded-xl bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white transition-colors border border-stone-700/60"
+            className="p-1.5 sm:p-2 rounded-xl bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white transition-colors border border-stone-700/60"
             title="Exit to Admin"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-brand-400 flex items-center justify-center font-bold border border-amber-500/30">
-              <Users className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500/20 text-brand-400 flex items-center justify-center font-bold border border-amber-500/30 shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h1 className="font-display font-extrabold text-lg text-white leading-tight">
+              <h1 className="font-display font-extrabold text-sm sm:text-lg text-white leading-tight">
                 Waiter & Floor Management
               </h1>
-              <p className="text-[10px] text-amber-400/90 font-mono -mt-0.5">LOWKEY CAFE • REAL-TIME TABLE DISPATCH</p>
+              <p className="text-[9px] sm:text-[10px] text-amber-400/90 font-mono -mt-0.5 hidden xs:block">LOWKEY CAFE • REAL-TIME TABLE DISPATCH</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="px-3 py-1 rounded-full bg-stone-800 text-xs font-semibold text-stone-300 border border-stone-700">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="hidden sm:inline-block px-3 py-1 rounded-full bg-stone-800 text-xs font-semibold text-stone-300 border border-stone-700">
             {requests.length} Pending Calls
           </span>
           <button
             onClick={loadFloor}
-            className="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-400 text-stone-950 rounded-xl text-xs font-extrabold shadow-md shadow-brand-500/20 transition-all"
+            className="px-2.5 sm:px-3.5 py-1.5 bg-brand-500 hover:bg-brand-400 text-stone-950 rounded-xl text-xs font-extrabold shadow-md shadow-brand-500/20 transition-all whitespace-nowrap"
           >
-            Refresh Floor
+            Refresh
           </button>
         </div>
       </header>

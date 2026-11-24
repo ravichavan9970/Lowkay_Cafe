@@ -29,13 +29,16 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="relative min-h-screen">
-      {/* Main Content: Offset by pl-16 sm:pl-20 when staff sidebar is open so it NEVER overlaps! */}
+      {/* Main Content:
+          - On desktop (sm and up): Offset by pl-16 sm:pl-20 when staff sidebar is open so it NEVER overlaps!
+          - On mobile (< sm): Use pl-0 so 100% of phone width is available, and add pb-16 for the mobile bottom bar!
+      */}
       <div
         className={
           isStaffRoute
             ? isSidebarCollapsed
-              ? 'transition-all duration-300 pl-0 min-h-screen'
-              : 'transition-all duration-300 pl-16 sm:pl-20 min-h-screen'
+              ? 'transition-all duration-300 pl-0 pb-0 min-h-screen'
+              : 'transition-all duration-300 pl-0 sm:pl-16 md:pl-20 pb-16 sm:pb-0 min-h-screen'
             : 'min-h-screen'
         }
       >

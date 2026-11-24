@@ -285,38 +285,38 @@ export const AdminDashboard: React.FC = () => {
     <div className="min-h-screen bg-stone-100 text-stone-900 flex flex-col font-sans">
       
       {/* Top Navbar */}
-      <header className="h-16 bg-white border-b border-stone-200 px-4 sm:px-6 flex items-center justify-between shadow-sm shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="h-16 bg-white border-b border-stone-200 px-3 sm:px-6 flex items-center justify-between shadow-sm shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
           <img
             src="/logo.png"
             alt="Lowkey Cafe Logo"
-            className="w-10 h-10 object-contain shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0"
           />
           <div>
-            <h1 className="font-display font-extrabold text-lg text-stone-950 flex items-center gap-2">
-              Lowkey Cafe <span className="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-800 font-bold border border-brand-500/30">Owner Portal</span>
+            <h1 className="font-display font-extrabold text-sm sm:text-lg text-stone-950 flex items-center gap-1 sm:gap-2">
+              Lowkey Cafe <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-800 font-bold border border-brand-500/30 whitespace-nowrap">Owner Portal</span>
             </h1>
-            <p className="text-[10px] text-stone-500">Centralized Restaurant Command Center</p>
+            <p className="text-[10px] text-stone-500 hidden sm:block">Centralized Restaurant Command Center</p>
           </div>
         </div>
 
         {/* Quick links to KDS, Waiter, and Customer Menu */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
             to="/kds"
-            className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-900 text-xs font-bold hover:bg-amber-500/25 transition-colors"
+            className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-900 text-[11px] sm:text-xs font-bold hover:bg-amber-500/25 transition-colors whitespace-nowrap"
           >
-            Open KDS
+            KDS
           </Link>
           <Link
             to="/waiter"
-            className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-900 text-xs font-bold hover:bg-blue-500/25 transition-colors"
+            className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-900 text-[11px] sm:text-xs font-bold hover:bg-blue-500/25 transition-colors whitespace-nowrap"
           >
-            Floor View
+            Floor
           </Link>
           <Link
-            to="/?table=1"
-            className="px-3 py-1.5 rounded-xl bg-stone-900 text-white text-xs font-bold hover:bg-stone-800 transition-colors"
+            to="/table/1"
+            className="hidden md:inline-block px-3 py-1.5 rounded-xl bg-stone-900 text-white text-xs font-bold hover:bg-stone-800 transition-colors whitespace-nowrap"
           >
             Customer View
           </Link>
