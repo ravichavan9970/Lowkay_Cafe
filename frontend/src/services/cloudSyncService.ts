@@ -420,6 +420,19 @@ class CloudSyncService {
 
     await this.updateOrderStatus(bill.orderId, 'COMPLETED');
 
+    // Auto-resolve any pending waiter calls or cash collection requests for this table
+    try {
+      const requests = await this.getWaiterRequests();
+      const tableReqs = requests.filter(
+        (r) => r.tableNumber === bill.tableNumber && r.status !== 'RESOLVED'
+      );
+      for (const r of tableReqs) {
+        await this.resolveWaiterRequest(r.id);
+      }
+    } catch (e) {
+      console.warn('Auto resolve waiter request on payment error', e);
+    }
+
     const event: OrderEvent = { action: 'RECORD_PAYMENT', orderId: bill.orderId, bill: paidBill };
     try {
       await fetch(`${NTFY_BASE}/${ORDERS_TOPIC}`, {
@@ -461,7 +474,7 @@ class CloudSyncService {
 
       let status = 'AVAILABLE';
       if (tableReq) {
-        status = 'ASSISTANCE_REQUESTED';
+        status = tableReq.requestType === 'BILL_REQUEST' ? 'BILLING_REQUESTED' : 'ASSISTANCE_REQUESTED';
       } else if (tableOrder) {
         if (tableOrder.status === 'PREPARING' || tableOrder.status === 'ACCEPTED' || tableOrder.status === 'NEW_ORDER') {
           status = 'PREPARING';

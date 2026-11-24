@@ -127,6 +127,7 @@ export const WaiterDashboard: React.FC = () => {
       await billingApi.recordCashPayment({ billId: bill.id, tipAmount: 0 });
       await loadFloor();
       setTableBill((prev) => (prev ? { ...prev, status: 'PAID' } : null));
+      setSelectedTable((prev) => (prev ? { ...prev, status: 'AVAILABLE', activeOrderId: undefined, activeOrderCode: undefined } : null));
     } catch (e) {
       console.error(e);
     }
@@ -176,8 +177,8 @@ export const WaiterDashboard: React.FC = () => {
       if (targetReq) {
         setTables((prev) =>
           prev.map((t) =>
-            t.tableNumber === targetReq.tableNumber && t.status === 'ASSISTANCE_REQUESTED'
-              ? { ...t, status: 'OCCUPIED' }
+            t.tableNumber === targetReq.tableNumber && (t.status === 'ASSISTANCE_REQUESTED' || t.status === 'BILLING_REQUESTED')
+              ? { ...t, status: t.activeOrderId ? 'OCCUPIED' : 'AVAILABLE' }
               : t
           )
         );
@@ -214,7 +215,7 @@ export const WaiterDashboard: React.FC = () => {
       case 'ASSISTANCE_REQUESTED':
         return 'bg-rose-950/50 text-rose-300 border-rose-500 animate-pulse font-bold';
       case 'BILLING_REQUESTED':
-        return 'bg-purple-950/30 border-purple-500/40 text-purple-300 hover:border-purple-400';
+        return 'bg-purple-950/60 border-purple-500 text-purple-200 font-black animate-pulse shadow-lg shadow-purple-500/30';
       default:
         return 'bg-stone-900/60 border-stone-800 text-stone-400';
     }
@@ -222,10 +223,10 @@ export const WaiterDashboard: React.FC = () => {
 
   const getRequestIcon = (type: string) => {
     switch (type) {
+      case 'BILL_REQUEST': return Banknote;
       case 'WATER': return Droplets;
       case 'EXTRA_PLATES': return Utensils;
       case 'MENU_HELP': return HelpCircle;
-      case 'BILL_REQUEST': return Receipt;
       default: return Bell;
     }
   };
@@ -288,8 +289,9 @@ export const WaiterDashboard: React.FC = () => {
               <div className="hidden sm:flex items-center gap-2.5 text-[10px] font-semibold text-stone-400">
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> Avail</span>
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400"></span> Occupied</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400"></span> In Prep</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-orange-400"></span> In Prep</span>
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"></span> Needs Server</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span> Collect Cash</span>
               </div>
             </div>
 
@@ -392,10 +394,14 @@ export const WaiterDashboard: React.FC = () => {
                   {tableBill && tableBill.status !== 'PAID' && (
                     <button
                       onClick={() => handleSettleTableBill(tableBill)}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                      className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+                        selectedTable.status === 'BILLING_REQUESTED'
+                          ? 'bg-purple-500 hover:bg-purple-400 text-white animate-pulse shadow-purple-500/30 ring-2 ring-purple-400/50'
+                          : 'bg-emerald-500 hover:bg-emerald-400 text-stone-950'
+                      }`}
                     >
                       <Banknote className="w-4 h-4" />
-                      <span>Settle Bill (₹{tableBill.finalPayableAmount})</span>
+                      <span>{selectedTable.status === 'BILLING_REQUESTED' ? `💵 Settle & Collect Cash (₹${tableBill.finalPayableAmount})` : `Settle Bill (₹${tableBill.finalPayableAmount})`}</span>
                     </button>
                   )}
                   <button
@@ -436,14 +442,24 @@ export const WaiterDashboard: React.FC = () => {
               <div className="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1">
                 {requests.map((req) => {
                   const Icon = getRequestIcon(req.requestType);
+                  const isCashBill = req.requestType === 'BILL_REQUEST';
                   return (
                     <div
                       key={req.id}
-                      className="p-4 rounded-2xl border border-stone-800 bg-stone-950/70 hover:border-brand-500/40 shadow-md transition-all space-y-2.5"
+                      className={`p-4 rounded-2xl border shadow-md transition-all space-y-2.5 ${
+                        isCashBill
+                          ? 'border-purple-500/60 bg-purple-950/40 shadow-purple-500/10 ring-1 ring-purple-500/30'
+                          : 'border-stone-800 bg-stone-950/70 hover:border-brand-500/40'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-display font-black text-lg text-white">
+                        <span className="font-display font-black text-lg text-white flex items-center gap-2">
                           Table #{req.tableNumber}
+                          {isCashBill && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase tracking-wider">
+                              💵 COLLECT CASH
+                            </span>
+                          )}
                         </span>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -457,12 +473,18 @@ export const WaiterDashboard: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 text-xs font-semibold text-stone-300">
-                        <Icon className="w-4 h-4 text-brand-400" />
-                        <span>{req.requestType.replace('_', ' ')}</span>
+                        <Icon className={`w-4 h-4 ${isCashBill ? 'text-purple-400' : 'text-brand-400'}`} />
+                        <span className={isCashBill ? 'text-purple-200 font-bold' : ''}>
+                          {isCashBill ? 'Cash Payment Collection / Bill' : req.requestType.replace('_', ' ')}
+                        </span>
                       </div>
 
                       {req.additionalNote && (
-                        <p className="text-xs text-stone-300 italic bg-stone-900 p-2.5 rounded-xl border border-stone-800">
+                        <p className={`text-xs italic p-2.5 rounded-xl border ${
+                          isCashBill
+                            ? 'text-purple-200 bg-purple-950/60 border-purple-800/80 font-medium'
+                            : 'text-stone-300 bg-stone-900 border-stone-800'
+                        }`}>
                           "{req.additionalNote}"
                         </p>
                       )}
@@ -472,9 +494,13 @@ export const WaiterDashboard: React.FC = () => {
                         {req.status === 'PENDING' ? (
                           <button
                             onClick={() => handleAcceptRequest(req.id)}
-                            className="flex-1 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-stone-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-brand-500/20 transition-all"
+                            className={`flex-1 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-all ${
+                              isCashBill
+                                ? 'bg-purple-500 hover:bg-purple-400 text-white shadow-purple-500/20'
+                                : 'bg-brand-500 hover:bg-brand-400 text-stone-950 shadow-brand-500/20'
+                            }`}
                           >
-                            <span>Accept</span>
+                            <span>{isCashBill ? 'Accept & Head to Table' : 'Accept'}</span>
                           </button>
                         ) : (
                           <button
@@ -482,7 +508,7 @@ export const WaiterDashboard: React.FC = () => {
                             className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>Mark Resolved</span>
+                            <span>{isCashBill ? 'Mark Resolved & Cash Collected' : 'Mark Resolved'}</span>
                           </button>
                         )}
                       </div>

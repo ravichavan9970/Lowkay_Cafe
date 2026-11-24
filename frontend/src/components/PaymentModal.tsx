@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bill } from '../types';
-import { billingApi } from '../services/api';
+import { billingApi, waiterApi } from '../services/api';
 import { generateQrDataUrl } from '../services/qrService';
 import confetti from 'canvas-confetti';
 import {
@@ -67,7 +67,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       }
 
       if (selectedMethod === 'CASH') {
-        // Cash payment flow
+        // Cash payment flow: Notify Waiter to collect cash from table
+        await waiterApi.callWaiter({
+          tableNumber: bill.tableNumber,
+          requestType: 'BILL_REQUEST',
+          additionalNote: `Customer requested cash payment: ₹${payableTotal.toFixed(2)} (Bill #${bill.billNumber})`,
+        });
         setCashRequested(true);
         setIsProcessing(false);
         return;
@@ -141,16 +146,33 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {cashRequested ? (
           <div className="py-6 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto animate-pulse">
               <Banknote className="w-8 h-8" />
             </div>
             <div>
               <h3 className="font-display font-extrabold text-xl text-stone-900">
-                Cash Payment Requested
+                Cash Collection Requested
               </h3>
               <p className="text-xs text-stone-500 mt-1 max-w-xs mx-auto">
-                Please have <strong>₹{payableTotal}</strong> ready. Your waiter has been notified and is coming to Table #{bill.tableNumber} to collect cash and present your receipt.
+                A request has been sent to your waiter to collect cash from <strong>Table #{bill.tableNumber}</strong>. Please have exact change ready.
               </p>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 text-left text-xs space-y-1.5">
+              <div className="flex justify-between font-semibold text-stone-700">
+                <span>Bill Total:</span>
+                <span>₹{(bill?.finalPayableAmount ?? 0).toFixed(2)}</span>
+              </div>
+              {calculatedTip > 0 && (
+                <div className="flex justify-between text-stone-600">
+                  <span>Server Tip / Gratuity:</span>
+                  <span>+₹{calculatedTip.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-black text-amber-900 pt-1.5 border-t border-amber-200/60 text-sm">
+                <span>Total Cash to Hand:</span>
+                <span>₹{payableTotal.toFixed(2)}</span>
+              </div>
             </div>
 
             <button
@@ -159,7 +181,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-98"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              <span>Staff Collected Cash (Simulate Confirmation)</span>
+              <span>Cash Handed to Waiter (Complete)</span>
             </button>
           </div>
         ) : (
@@ -330,7 +352,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             >
               <span className="flex items-center gap-1.5">
                 {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 text-emerald-400" />}
-                {selectedMethod === 'CASH' ? 'Request Cash Collection' : `Pay ₹${payableTotal.toFixed(2)}`}
+                {selectedMethod === 'CASH' ? `Request Waiter to Collect ₹${payableTotal.toFixed(2)} Cash` : `Pay ₹${payableTotal.toFixed(2)}`}
               </span>
               <span className="text-xs text-amber-300 font-mono font-bold">100% Secure</span>
             </button>
