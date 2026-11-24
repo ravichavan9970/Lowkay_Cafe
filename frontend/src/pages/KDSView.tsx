@@ -78,6 +78,9 @@ export const KDSView: React.FC = () => {
     const handleLocalOrder = (e: any) => {
       const newOrUpdated: Order = e.detail;
       if (!newOrUpdated || !newOrUpdated.id) return;
+      if (newOrUpdated.orderCode && ['ORD-556609', 'ORD-397384', 'ORD-255965', 'ORD-138122', 'ORD-146547', 'ORD-849201', 'ORD-849202'].includes(newOrUpdated.orderCode)) {
+        return;
+      }
       const targetId = Number(newOrUpdated.id);
       setOrders((prev) => {
         if (newOrUpdated.status === 'COMPLETED' || newOrUpdated.status === 'CANCELLED' || newOrUpdated.status === 'SERVED') {

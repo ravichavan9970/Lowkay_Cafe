@@ -10,8 +10,8 @@ const CLOUD_BROKERS = [
   'https://ntfy.sh',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
-const ORDERS_TOPIC = 'lowkey_cafe_orders_v7_clean';
-const WAITER_TOPIC = 'lowkey_cafe_waiter_v7_clean';
+const ORDERS_TOPIC = 'lowkey_cafe_orders_v8_clean';
+const WAITER_TOPIC = 'lowkey_cafe_waiter_v8_clean';
 const DISMISSED_ORDER_CODES = new Set(['ORD-556609', 'ORD-397384', 'ORD-255965', 'ORD-138122', 'ORD-146547', 'ORD-849201', 'ORD-849202']);
 
 interface OrderEvent {
@@ -60,13 +60,13 @@ class CloudSyncService {
   private purgeLegacyDemoOrders() {
     if (typeof window === 'undefined') return;
     try {
-      if (!localStorage.getItem('lowkey_purged_demo_orders_v7')) {
+      if (!localStorage.getItem('lowkey_purged_demo_orders_v8')) {
         localStorage.removeItem('lowkey_demo_orders');
         localStorage.removeItem('lowkey_demo_bills');
         localStorage.removeItem('lowkey_demo_waiter_requests');
         localStorage.removeItem('lowkey_resolved_waiter_ids');
         localStorage.removeItem('lowkey_dismissed_orders');
-        localStorage.setItem('lowkey_purged_demo_orders_v7', 'true');
+        localStorage.setItem('lowkey_purged_demo_orders_v8', 'true');
       }
     } catch (e) {
       console.warn('Purge error', e);
