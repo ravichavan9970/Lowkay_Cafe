@@ -71,7 +71,7 @@ export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen lg:h-screen bg-[#090909] text-white flex flex-col justify-between selection:bg-[#FFD000] selection:text-black font-sans relative overflow-x-hidden p-2 sm:p-4 lg:p-5">
+    <div className="min-h-screen bg-[#090909] text-white flex flex-col justify-between selection:bg-[#FFD000] selection:text-black font-sans relative overflow-x-hidden p-2 sm:p-4 lg:p-5">
       {/* Subtle futuristic amber/gold ambient glow behind the header */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[220px] bg-[#FFD000]/5 blur-[100px] rounded-full pointer-events-none" />
 
