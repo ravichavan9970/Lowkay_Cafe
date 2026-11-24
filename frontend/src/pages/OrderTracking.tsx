@@ -4,6 +4,7 @@ import { orderApi, billingApi, kitchenApi } from '../services/api';
 import { Order, Bill, OrderStatus } from '../types';
 import wsService from '../services/websocket';
 import cloudSync from '../services/cloudSyncService';
+import { downloadReceiptPdf } from '../services/receiptPdfService';
 import { Navbar } from '../components/Navbar';
 import Footer from '../components/Footer';
 import PaymentModal from '../components/PaymentModal';
@@ -24,6 +25,7 @@ import {
   ArrowRight,
   Loader2,
   Sparkles,
+  Download,
 } from 'lucide-react';
 
 const STATUS_STEPS: { status: OrderStatus; label: string; desc: string; icon: any }[] = [
@@ -430,17 +432,25 @@ export const OrderTracking: React.FC = () => {
                 <>
                   <button
                     onClick={() => setShowReceipt(true)}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-stone-800 border border-stone-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-stone-800 border border-stone-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm hover:bg-stone-50 transition-colors"
                   >
-                    <Receipt className="w-4 h-4 text-brand-600" />
-                    <span>View Receipt & PDF</span>
+                    <Receipt className="w-4 h-4 text-amber-600" />
+                    <span>View Receipt</span>
+                  </button>
+
+                  <button
+                    onClick={() => downloadReceiptPdf(bill)}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-stone-950 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-98"
+                  >
+                    <Download className="w-4 h-4 text-stone-950" />
+                    <span>Download PDF</span>
                   </button>
 
                   <button
                     onClick={() => setShowReview(true)}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-amber-500 to-brand-500 hover:from-amber-600 hover:to-brand-600 text-stone-950 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md"
                   >
-                    <Star className="w-4 h-4 fill-stone-950" />
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     <span>Rate Dining</span>
                   </button>
                 </>

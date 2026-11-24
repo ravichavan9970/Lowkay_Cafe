@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bill } from '../types';
 import { billingApi } from '../services/api';
+import { downloadReceiptPdf } from '../services/receiptPdfService';
 import { X, Download, Mail, Star, CheckCircle2, Coffee, Loader2 } from 'lucide-react';
 
 interface ReceiptModalProps {
@@ -17,6 +18,19 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [email, setEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      await downloadReceiptPdf(bill);
+    } catch (err) {
+      console.error('Failed to generate PDF receipt', err);
+      alert('Could not generate PDF receipt.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const handleSendEmail = async () => {
     if (!email.trim()) return;
@@ -162,16 +176,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         {/* Footer Actions */}
         <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between gap-3">
           {/* Download PDF button */}
-          <a
-            href={billingApi.downloadPdfUrl(bill.id)}
-            download={`Receipt-${bill.billNumber}.pdf`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 py-2.5 px-3 rounded-xl border border-stone-300 hover:border-stone-400 bg-white text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            className="flex-1 py-2.5 px-3 rounded-xl border border-stone-300 hover:border-stone-400 bg-white text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-98 disabled:opacity-50"
           >
-            <Download className="w-4 h-4 text-stone-600" />
-            <span>Download PDF</span>
-          </a>
+            {isDownloading ? (
+              <Loader2 className="w-4 h-4 text-stone-600 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 text-stone-600" />
+            )}
+            <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
+          </button>
 
           {/* One-tap review button */}
           <button
