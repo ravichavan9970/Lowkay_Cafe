@@ -344,7 +344,7 @@ export const orderApi = {
   trackOrder: async (orderCode: string): Promise<{ data: Order }> => {
     if (shouldUseCloudSyncDirectly) {
       const found = await cloudSync.getOrderByCode(orderCode);
-      return { data: found || MOCK_ORDERS[0] };
+      return { data: found || null as any };
     }
 
     try {
@@ -355,13 +355,13 @@ export const orderApi = {
       return res;
     } catch {
       const found = await cloudSync.getOrderByCode(orderCode);
-      return { data: found || MOCK_ORDERS[0] };
+      return { data: found || null as any };
     }
   },
   getOrdersByTable: (tableNum: number) =>
     safeApiCall(
       () => api.get<Order[]>(`/orders/table/${tableNum}`),
-      MOCK_ORDERS.filter((o) => o.tableNumber === tableNum)
+      []
     ),
   cancelOrder: (orderId: number) => api.post<Order>(`/orders/${orderId}/cancel`),
 };
@@ -395,7 +395,7 @@ export const kitchenApi = {
     }
   },
   getOrdersByStation: (stationId: number) =>
-    safeApiCall(() => api.get<Order[]>(`/kitchen/orders/station/${stationId}`), MOCK_ORDERS),
+    safeApiCall(() => api.get<Order[]>(`/kitchen/orders/station/${stationId}`), []),
   updateOrderStatus: async (orderId: number, status: string, reason?: string) => {
     if (shouldUseCloudSyncDirectly) {
       const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason);
@@ -668,7 +668,7 @@ export const adminApi = {
   getOrdersHistory: (startDate?: string, endDate?: string) =>
     safeApiCall(
       () => api.get<Order[]>(`/admin/orders?${startDate ? `startDate=${startDate}&` : ''}${endDate ? `endDate=${endDate}` : ''}`),
-      MOCK_ORDERS
+      []
     ),
   createTable: (data: any) => {
     const base = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.origin : 'https://lowkey-cafe-three.vercel.app';

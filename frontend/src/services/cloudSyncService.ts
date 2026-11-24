@@ -9,12 +9,12 @@ const CLOUD_BROKERS = [
   'https://ntfy.tedomum.fr',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
-const ORDERS_TOPIC = 'lowkey_cafe_orders_v5';
-const WAITER_TOPIC = 'lowkey_cafe_waiter_v5';
-const DISMISSED_ORDER_CODES = new Set(['ORD-556609', 'ORD-397384', 'ORD-255965']);
+const ORDERS_TOPIC = 'lowkey_cafe_orders_v7_clean';
+const WAITER_TOPIC = 'lowkey_cafe_waiter_v7_clean';
+const DISMISSED_ORDER_CODES = new Set(['ORD-556609', 'ORD-397384', 'ORD-255965', 'ORD-138122', 'ORD-146547', 'ORD-849201', 'ORD-849202']);
 
 interface OrderEvent {
-  action: 'CREATE' | 'UPDATE_STATUS' | 'RECORD_PAYMENT';
+  action: 'CREATE' | 'UPDATE_STATUS' | 'RECORD_PAYMENT' | 'CLEAR_ALL';
   order?: Order;
   orderId?: number;
   status?: OrderStatus;
@@ -50,9 +50,26 @@ class CloudSyncService {
   private isFetchingWaiter: boolean = false;
 
   constructor() {
+    this.purgeLegacyDemoOrders();
     this.initResolvedIds();
     this.initDismissedOrderIds();
     this.initCrossTabSync();
+  }
+
+  private purgeLegacyDemoOrders() {
+    if (typeof window === 'undefined') return;
+    try {
+      if (!localStorage.getItem('lowkey_purged_demo_orders_v7')) {
+        localStorage.removeItem('lowkey_demo_orders');
+        localStorage.removeItem('lowkey_demo_bills');
+        localStorage.removeItem('lowkey_demo_waiter_requests');
+        localStorage.removeItem('lowkey_resolved_waiter_ids');
+        localStorage.removeItem('lowkey_dismissed_orders');
+        localStorage.setItem('lowkey_purged_demo_orders_v7', 'true');
+      }
+    } catch (e) {
+      console.warn('Purge error', e);
+    }
   }
 
   private initCrossTabSync() {
@@ -193,6 +210,25 @@ class CloudSyncService {
     }
   }
 
+  async clearAllOrders(): Promise<void> {
+    this.ordersMap.clear();
+    this.dismissedOrderIds.clear();
+    try {
+      localStorage.removeItem('lowkey_demo_orders');
+      localStorage.removeItem('lowkey_demo_bills');
+      localStorage.removeItem('lowkey_dismissed_orders');
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: { cleared: true } }));
+    }
+
+    const event: any = { action: 'CLEAR_ALL' };
+    this.broadcastToTabs('ORDER_EVENT', event);
+    this.publishToCloud(ORDERS_TOPIC, event, 'All Orders Cleared');
+    this.notifyOrderListeners([]);
+  }
+
   private saveResolvedId(id: number) {
     this.resolvedWaiterIds.add(id);
     try {
@@ -224,15 +260,9 @@ class CloudSyncService {
    * Throttled to prevent 429 rate limits across tabs and views.
    */
   async getOrders(force = false): Promise<Order[]> {
-    // 1. Seed with mock orders and local cache
+    // 1. Load locally placed orders
     const localRaw = localStorage.getItem('lowkey_demo_orders');
     const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
-
-    MOCK_ORDERS.forEach((o) => {
-      if (!this.ordersMap.has(o.id)) {
-        this.ordersMap.set(o.id, { ...o });
-      }
-    });
 
     localOrders.forEach((o) => {
       this.ordersMap.set(o.id, o);
@@ -308,6 +338,17 @@ class CloudSyncService {
 
   private applyOrderEvent(evt: OrderEvent) {
     if (!evt || !evt.action) return;
+
+    if (evt.action === 'CLEAR_ALL') {
+      this.ordersMap.clear();
+      this.dismissedOrderIds.clear();
+      try {
+        localStorage.removeItem('lowkey_demo_orders');
+        localStorage.removeItem('lowkey_demo_bills');
+        localStorage.removeItem('lowkey_dismissed_orders');
+      } catch (e) {}
+      return;
+    }
 
     if (evt.action === 'CREATE' && evt.order) {
       const numId = Number(evt.order.id);
@@ -559,9 +600,7 @@ class CloudSyncService {
     // 3. Fallback to network query
     const orders = await this.getOrders();
     const found = orders.find((o) => o.orderCode && o.orderCode.trim().toUpperCase() === cleanCode);
-    if (found) return found;
-
-    return MOCK_ORDERS.find((o) => o.orderCode === orderCode) || null;
+    return found || null;
   }
 
   async getBillForOrder(orderId: number): Promise<Bill> {
@@ -762,14 +801,7 @@ class CloudSyncService {
    * Throttled to prevent 429 rate limits.
    */
   async getWaiterRequests(force = false): Promise<WaiterRequest[]> {
-    // 1. Seed with mocks if not yet resolved
-    MOCK_WAITER_REQUESTS.forEach((r) => {
-      if (!this.resolvedWaiterIds.has(r.id) && !this.waiterRequestsMap.has(r.id)) {
-        this.waiterRequestsMap.set(r.id, { ...r });
-      }
-    });
-
-    // 2. Load locally stored requests (from Diner tab or previous actions)
+    // 1. Load locally stored requests (from Diner tab or previous actions)
     try {
       const localRaw = localStorage.getItem('lowkey_demo_waiter_requests');
       if (localRaw) {

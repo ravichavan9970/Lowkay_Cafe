@@ -610,7 +610,7 @@ export const MOCK_TABLES: Table[] = Array.from({ length: 10 }, (_, i) => {
   const num = i + 1;
   const zone = num <= 4 ? 'Indoor Lounge' : num <= 8 ? 'Patio Garden' : 'Rooftop Terrace';
   const capacity = num % 3 === 0 ? 6 : num % 2 === 0 ? 4 : 2;
-  const status = num === 2 ? 'OCCUPIED' : num === 4 ? 'AVAILABLE' : num === 7 ? 'PREPARING' : 'AVAILABLE';
+  const status = 'AVAILABLE';
   const fullTargetUrl = `https://lowkey-cafe-three.vercel.app/table/${num}?token=demo-token-tbl-${num}`;
   return {
     id: num,
@@ -625,103 +625,9 @@ export const MOCK_TABLES: Table[] = Array.from({ length: 10 }, (_, i) => {
   };
 });
 
-export const MOCK_ORDERS: Order[] = [
-  {
-    id: 101,
-    orderCode: 'ORD-849201',
-    tableNumber: 4,
-    customerName: 'Aarav Sharma',
-    customerPhone: '+91 98765 43210',
-    status: 'PREPARING',
-    subtotal: 748,
-    taxAmount: 37.4,
-    serviceCharge: 37.4,
-    discountAmount: 0,
-    grandTotal: 822.8,
-    estimatedPrepMinutes: 16,
-    createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    items: [
-      {
-        id: 1,
-        foodItemId: 1,
-        foodItemName: 'Truffle Parmesan Fries',
-        foodItemImage: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80',
-        categoryName: 'Starters',
-        quantity: 1,
-        unitPrice: 249,
-        subtotal: 249,
-        selectedPortion: 'Full',
-        selectedSpiceLevel: 'MILD',
-        status: 'PREPARING',
-        customizations: [],
-      },
-      {
-        id: 2,
-        foodItemId: 9,
-        foodItemName: 'Artisan Burrata Margherita',
-        foodItemImage: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=600&q=80',
-        categoryName: 'Pizza',
-        quantity: 1,
-        unitPrice: 499,
-        subtotal: 499,
-        selectedPortion: 'Full',
-        selectedSpiceLevel: 'MILD',
-        status: 'PREPARING',
-        customizations: [],
-      },
-    ],
-  },
-  {
-    id: 102,
-    orderCode: 'ORD-849202',
-    tableNumber: 2,
-    customerName: 'Priya Patel',
-    status: 'READY',
-    subtotal: 469,
-    taxAmount: 23.45,
-    serviceCharge: 23.45,
-    discountAmount: 0,
-    grandTotal: 515.9,
-    estimatedPrepMinutes: 14,
-    createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    items: [
-      {
-        id: 3,
-        foodItemId: 15,
-        foodItemName: 'Nashville Hot Honey Crispy Chicken Sandwich',
-        foodItemImage: 'https://images.unsplash.com/photo-1625813506062-0aeb1d7a094b?auto=format&fit=crop&w=600&q=80',
-        categoryName: 'Burgers',
-        quantity: 1,
-        unitPrice: 469,
-        subtotal: 469,
-        selectedPortion: 'Full',
-        selectedSpiceLevel: 'HOT',
-        status: 'READY',
-        customizations: [],
-      },
-    ],
-  },
-];
+export const MOCK_ORDERS: Order[] = [];
 
-export const MOCK_WAITER_REQUESTS: WaiterRequest[] = [
-  {
-    id: 1,
-    tableNumber: 4,
-    requestType: 'WATER',
-    status: 'PENDING',
-    additionalNote: 'Bottled mineral water with lemon slice',
-    requestedAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-  },
-  {
-    id: 2,
-    tableNumber: 7,
-    requestType: 'ASSISTANCE',
-    status: 'IN_PROGRESS',
-    assignedWaiterName: 'Lead Waiter Alex',
-    additionalNote: 'Customer wants recommendations on vegan options',
-    requestedAt: new Date(Date.now() - 1000 * 60 * 7).toISOString(),
-  },
-];
+export const MOCK_WAITER_REQUESTS: WaiterRequest[] = [];
 
 export const MOCK_STAFF = [
   { id: 1, username: 'admin', fullName: 'Cafe General Manager', role: 'ROLE_ADMIN', email: 'admin@lowkeycafe.com', isActive: true },

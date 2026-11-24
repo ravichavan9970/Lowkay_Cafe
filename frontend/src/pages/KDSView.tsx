@@ -18,6 +18,7 @@ import {
   Layers,
   Sparkles,
   ShoppingBag,
+  Trash2,
 } from 'lucide-react';
 
 interface Station {
@@ -203,6 +204,24 @@ export const KDSView: React.FC = () => {
     return Math.max(1, Math.floor(diff));
   };
 
+  const handleDismissOrder = async (orderId: number) => {
+    try {
+      await cloudSync.dismissOrder(orderId);
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClearAllOrders = async () => {
+    try {
+      await cloudSync.clearAllOrders();
+      setOrders([]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans">
       
@@ -290,8 +309,19 @@ export const KDSView: React.FC = () => {
           })}
         </div>
 
-        {/* Audio Toggle & Refresh */}
+        {/* Audio Toggle, Clear Orders & Refresh */}
         <div className="flex items-center gap-2 shrink-0">
+          {orders.length > 0 && (
+            <button
+              onClick={handleClearAllOrders}
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-rose-800/80 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95"
+              title="Clear all tickets from kitchen screen"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Clear All</span>
+            </button>
+          )}
+
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className={`p-2 rounded-xl border text-xs font-bold transition-colors ${
@@ -375,16 +405,26 @@ export const KDSView: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Timer */}
-                    <div
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-xs font-bold border ${
-                        isDelayed
-                          ? 'bg-rose-500 text-stone-950 border-rose-400 animate-pulse'
-                          : 'bg-stone-800 text-stone-200 border-stone-700'
-                      }`}
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{elapsed}m</span>
+                    {/* Timer & Dismiss */}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-mono text-xs font-bold border ${
+                          isDelayed
+                            ? 'bg-rose-500 text-stone-950 border-rose-400 animate-pulse'
+                            : 'bg-stone-800 text-stone-200 border-stone-700'
+                        }`}
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{elapsed}m</span>
+                      </div>
+
+                      <button
+                        onClick={() => handleDismissOrder(order.id)}
+                        className="p-1.5 rounded-xl text-stone-500 hover:text-rose-400 hover:bg-stone-800 transition-colors"
+                        title="Dismiss / remove order ticket"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
