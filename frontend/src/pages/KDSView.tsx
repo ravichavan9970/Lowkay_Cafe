@@ -77,15 +77,16 @@ export const KDSView: React.FC = () => {
     // 2. Local instant update listener (0ms latency across same-device tabs)
     const handleLocalOrder = (e: any) => {
       const newOrUpdated: Order = e.detail;
-      if (!newOrUpdated) return;
+      if (!newOrUpdated || !newOrUpdated.id) return;
+      const targetId = Number(newOrUpdated.id);
       setOrders((prev) => {
         if (newOrUpdated.status === 'COMPLETED' || newOrUpdated.status === 'CANCELLED' || newOrUpdated.status === 'SERVED') {
-          return prev.filter((o) => o.id !== newOrUpdated.id);
+          return prev.filter((o) => Number(o.id) !== targetId);
         }
-        const idx = prev.findIndex((o) => o.id === newOrUpdated.id);
+        const idx = prev.findIndex((o) => Number(o.id) === targetId);
         if (idx > -1) {
           const updated = [...prev];
-          updated[idx] = newOrUpdated;
+          updated[idx] = { ...prev[idx], ...newOrUpdated };
           return updated;
         } else {
           return [newOrUpdated, ...prev];
@@ -157,36 +158,48 @@ export const KDSView: React.FC = () => {
     };
   }, [soundEnabled]);
 
-  // Advance Order Status
-  const handleAdvanceStatus = async (orderId: number, nextStatus: OrderStatus) => {
+  // Advance Order Status with immediate optimistic update and full order preservation
+  const handleAdvanceStatus = async (orderOrId: Order | number, nextStatus: OrderStatus) => {
+    const currentOrder = typeof orderOrId === 'object' ? orderOrId : orders.find(o => Number(o.id) === Number(orderOrId));
+    const targetId = currentOrder ? currentOrder.id : Number(orderOrId);
+    const numId = Number(targetId);
+
+    // 1. Instant optimistic UI transition (0ms latency for chef - never stuck)
+    setOrders((prev) => {
+      if (nextStatus === 'SERVED' || nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') {
+        return prev.filter((o) => Number(o.id) !== numId);
+      }
+      return prev.map((o) => {
+        if (Number(o.id) === numId) {
+          return { ...o, status: nextStatus };
+        }
+        return o;
+      });
+    });
+
     try {
-      const res = await kitchenApi.updateOrderStatus(orderId, nextStatus);
+      const res = await kitchenApi.updateOrderStatus(targetId, nextStatus, undefined, currentOrder);
       const updated = res.data;
-      setOrders((prev) => {
-        if (nextStatus === 'SERVED' || nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') {
-          return prev.filter((o) => o.id !== orderId);
-        }
-        return prev.map((o) => {
-          if (o.id === orderId) {
-            return {
-              ...o,
-              ...updated,
-              status: nextStatus,
-              items: Array.isArray(updated?.items) && updated.items.length > 0 ? updated.items : (Array.isArray(o.items) ? o.items : []),
-            };
+      if (updated) {
+        setOrders((prev) => {
+          if (nextStatus === 'SERVED' || nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') {
+            return prev.filter((o) => Number(o.id) !== numId);
           }
-          return o;
+          return prev.map((o) => {
+            if (Number(o.id) === numId) {
+              return {
+                ...o,
+                ...updated,
+                status: nextStatus,
+                items: Array.isArray(updated?.items) && updated.items.length > 0 ? updated.items : (Array.isArray(o.items) ? o.items : []),
+              };
+            }
+            return o;
+          });
         });
-      });
+      }
     } catch (err) {
-      console.error('Failed to update status', err);
-      // Fallback: update status locally so UI is never stuck
-      setOrders((prev) => {
-        if (nextStatus === 'SERVED' || nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') {
-          return prev.filter((o) => o.id !== orderId);
-        }
-        return prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o));
-      });
+      console.error('Failed to sync updated status to cloud', err);
     }
   };
 
@@ -497,7 +510,7 @@ export const KDSView: React.FC = () => {
                   <div className="p-3 bg-stone-950 border-t border-stone-800/90 flex gap-2">
                     {order.status === 'NEW_ORDER' && (
                       <button
-                        onClick={() => handleAdvanceStatus(order.id, 'ACCEPTED')}
+                        onClick={() => handleAdvanceStatus(order, 'ACCEPTED')}
                         className="w-full py-3 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-stone-950 font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-1.5"
                       >
                         <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
@@ -507,7 +520,7 @@ export const KDSView: React.FC = () => {
 
                     {order.status === 'ACCEPTED' && (
                       <button
-                        onClick={() => handleAdvanceStatus(order.id, 'PREPARING')}
+                        onClick={() => handleAdvanceStatus(order, 'PREPARING')}
                         className="w-full py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
                       >
                         <ChefHat className="w-4 h-4 stroke-[2.5]" />
@@ -517,7 +530,7 @@ export const KDSView: React.FC = () => {
 
                     {order.status === 'PREPARING' && (
                       <button
-                        onClick={() => handleAdvanceStatus(order.id, 'READY')}
+                        onClick={() => handleAdvanceStatus(order, 'READY')}
                         className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
                       >
                         <Bell className="w-4 h-4 stroke-[2.5]" />
@@ -527,7 +540,7 @@ export const KDSView: React.FC = () => {
 
                     {order.status === 'READY' && (
                       <button
-                        onClick={() => handleAdvanceStatus(order.id, 'SERVED')}
+                        onClick={() => handleAdvanceStatus(order, 'SERVED')}
                         className="w-full py-3 rounded-2xl bg-blue-500 hover:bg-blue-400 text-white font-display font-black text-sm uppercase tracking-wider shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
                       >
                         <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />

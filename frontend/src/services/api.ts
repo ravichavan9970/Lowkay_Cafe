@@ -396,11 +396,11 @@ export const kitchenApi = {
   },
   getOrdersByStation: (stationId: number) =>
     safeApiCall(() => api.get<Order[]>(`/kitchen/orders/station/${stationId}`), []),
-  updateOrderStatus: async (orderId: number, status: string, reason?: string) => {
+  updateOrderStatus: async (orderId: number, status: string, reason?: string, fallbackOrder?: Order) => {
     if (shouldUseCloudSyncDirectly) {
-      const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason);
+      const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason, fallbackOrder);
       return {
-        data: updated || {
+        data: updated || (fallbackOrder ? { ...fallbackOrder, status: status as any } : {
           id: orderId,
           orderCode: `ORD-${orderId}`,
           tableNumber: 4,
@@ -414,7 +414,7 @@ export const kitchenApi = {
           estimatedPrepMinutes: 12,
           createdAt: new Date().toISOString(),
           items: [],
-        },
+        }),
       };
     }
 
@@ -425,9 +425,9 @@ export const kitchenApi = {
       }
       return res;
     } catch {
-      const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason);
+      const updated = await cloudSync.updateOrderStatus(orderId, status as any, reason, fallbackOrder);
       return {
-        data: updated || {
+        data: updated || (fallbackOrder ? { ...fallbackOrder, status: status as any } : {
           id: orderId,
           orderCode: `ORD-${orderId}`,
           tableNumber: 4,
@@ -441,7 +441,7 @@ export const kitchenApi = {
           estimatedPrepMinutes: 12,
           createdAt: new Date().toISOString(),
           items: [],
-        },
+        }),
       };
     }
   },

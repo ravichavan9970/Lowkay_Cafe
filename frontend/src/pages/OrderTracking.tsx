@@ -174,10 +174,13 @@ export const OrderTracking: React.FC = () => {
   // Determine takeaway vs dine-in stepper and status
   const isTakeaway = order.tableNumber === 0;
   const statusSteps = isTakeaway ? TAKEAWAY_STATUS_STEPS : STATUS_STEPS;
-  const currentStepIdx = statusSteps.findIndex((s) => s.status === order.status);
   // Order completion is determined by actual food preparation & handover, NOT by payment alone!
   const isCompleted = order.status === 'COMPLETED' || order.status === 'SERVED';
   const isCancelled = order.status === 'CANCELLED';
+
+  const currentStepIdx = isCompleted
+    ? statusSteps.length - 1
+    : statusSteps.findIndex((s) => s.status === order.status);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white selection:bg-yellow-400 selection:text-black">
@@ -234,6 +237,8 @@ export const OrderTracking: React.FC = () => {
                   ? (isTakeaway ? 'Ready for Pickup!' : 'Your Food is Ready!')
                   : order.status === 'PREPARING'
                   ? 'Cooking Your Meal'
+                  : order.status === 'ACCEPTED'
+                  ? 'Order Accepted by Kitchen'
                   : 'Order Confirmed'}
               </h1>
               {isCompleted ? (
@@ -275,14 +280,14 @@ export const OrderTracking: React.FC = () => {
                     style={{
                       width: isCompleted
                         ? '100%'
-                        : `${Math.max(0, (currentStepIdx / (statusSteps.length - 1)) * 100)}%`,
+                        : `${Math.max(0, (Math.max(0, currentStepIdx) / (statusSteps.length - 1)) * 100)}%`,
                     }}
                   ></div>
                 </div>
 
                 {statusSteps.map((step, idx) => {
                   const Icon = step.icon;
-                  const isDone = isCompleted || currentStepIdx >= idx;
+                  const isDone = isCompleted || (currentStepIdx >= 0 && currentStepIdx >= idx);
                   const isCurrent = currentStepIdx === idx && !isCompleted;
 
                   return (

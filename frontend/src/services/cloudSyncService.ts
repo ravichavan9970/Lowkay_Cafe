@@ -1,13 +1,13 @@
 import { Order, OrderStatus, WaiterRequest, Bill, Table } from '../types';
 import { MOCK_ORDERS, MOCK_WAITER_REQUESTS, MOCK_TABLES } from './mockData';
 
-// High-speed Anycast global CDN broker with instant SSE & community fallbacks
+// Unblocked, high-performance community brokers with instant SSE
 const CLOUD_BROKERS = [
-  'https://ntfy.sh',
   'https://ntfy.adminforge.de',
   'https://ntfy.envs.net',
   'https://ntfy.tedomum.fr',
   'https://ntfy.projectsegfau.lt',
+  'https://ntfy.sh',
 ];
 const PRIMARY_BROKER = CLOUD_BROKERS[0];
 const ORDERS_TOPIC = 'lowkey_cafe_orders_v7_clean';
@@ -366,14 +366,23 @@ class CloudSyncService {
       if (evt.status === 'CANCELLED') {
         this.dismissedOrderIds.add(numId);
         this.ordersMap.delete(numId);
-    this.lastOrdersFetchTime = 0;
+        this.lastOrdersFetchTime = 0;
       } else {
         const existing = this.ordersMap.get(numId);
-        if (existing) {
-          this.ordersMap.set(numId, { ...existing, status: evt.status, ...(evt.order || {}) });
-        } else if (evt.order) {
-          this.ordersMap.set(numId, { ...evt.order, status: evt.status });
+        const updated = existing ? { ...existing, status: evt.status, ...(evt.order || {}) } : (evt.order || null);
+        if (updated) {
+          this.ordersMap.set(numId, updated);
+          try {
+            const raw = localStorage.getItem('lowkey_demo_orders');
+            const list: Order[] = raw ? JSON.parse(raw) : [];
+            const next = list.map(o => Number(o.id) === numId ? { ...o, ...updated, status: evt.status } : o);
+            if (!list.some(o => Number(o.id) === numId)) {
+              next.unshift(updated);
+            }
+            localStorage.setItem('lowkey_demo_orders', JSON.stringify(next));
+          } catch (e) {}
         }
+        this.lastOrdersFetchTime = 0;
       }
     } else if (evt.action === 'RECORD_PAYMENT' && evt.orderId) {
       const numId = Number(evt.orderId);
@@ -453,46 +462,74 @@ class CloudSyncService {
 
   /**
    * Updates an order's status and broadcasts to all listening screens.
+   * If fallbackOrder is provided (e.g. from KDS screen state), it ensures the order details,
+   * tableNumber, customerName and items are 100% preserved without ever generating a fake takeaway order.
    */
-  async updateOrderStatus(orderId: number, status: OrderStatus, _reason?: string): Promise<Order | null> {
+  async updateOrderStatus(
+    orderId: number,
+    status: OrderStatus,
+    _reason?: string,
+    fallbackOrder?: Order
+  ): Promise<Order | null> {
     const numId = Number(orderId);
     let order = this.ordersMap.get(numId);
+
+    // 1. Try finding by matching string or number ID in ordersMap
+    if (!order) {
+      for (const o of this.ordersMap.values()) {
+        if (Number(o.id) === numId || String(o.id) === String(orderId)) {
+          order = o;
+          break;
+        }
+      }
+    }
+
+    // 2. Try fallbackOrder passed directly from KDS
+    if (!order && fallbackOrder && (Number(fallbackOrder.id) === numId || String(fallbackOrder.id) === String(orderId))) {
+      order = fallbackOrder;
+    }
+
+    // 3. Try local storage
+    if (!order) {
+      try {
+        const localRaw = localStorage.getItem('lowkey_demo_orders');
+        const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
+        order = localOrders.find((o) => Number(o.id) === numId || String(o.id) === String(orderId));
+      } catch (e) {}
+    }
+
+    // 4. Try network fetch if still not found
     if (!order) {
       const orders = await this.getOrders();
-      order = orders.find((o) => Number(o.id) === numId);
+      order = orders.find((o) => Number(o.id) === numId || String(o.id) === String(orderId));
     }
 
-    const updatedOrder: Order = order
-      ? { ...order, status }
-      : {
-          id: numId,
-          orderCode: `ORD-${numId}`,
-          tableNumber: 0,
-          customerName: 'Takeaway Customer',
-          customerPhone: '+91 98765 43210',
-          status,
-          subtotal: 249,
-          taxAmount: 12.45,
-          serviceCharge: 0,
-          discountAmount: 0,
-          grandTotal: 261.45,
-          estimatedPrepMinutes: 12,
-          createdAt: new Date().toISOString(),
-          items: [],
-        };
-
-    if (!Array.isArray(updatedOrder.items)) {
-      updatedOrder.items = [];
+    // 5. Final fallback to fallbackOrder if provided
+    if (!order && fallbackOrder) {
+      order = fallbackOrder;
     }
+
+    if (!order) {
+      console.warn(`Order #${orderId} not found in cloudSync to update status to ${status}`);
+      return null;
+    }
+
+    const updatedOrder: Order = {
+      ...order,
+      status,
+      items: Array.isArray(order.items) ? order.items : [],
+    };
 
     this.ordersMap.set(numId, updatedOrder);
     this.lastOrdersFetchTime = 0;
 
     // Save locally
-    const localRaw = localStorage.getItem('lowkey_demo_orders');
-    const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
-    const nextLocal = [updatedOrder, ...localOrders.filter((o) => Number(o.id) !== numId)];
-    localStorage.setItem('lowkey_demo_orders', JSON.stringify(nextLocal));
+    try {
+      const localRaw = localStorage.getItem('lowkey_demo_orders');
+      const localOrders: Order[] = localRaw ? JSON.parse(localRaw) : [];
+      const nextLocal = [updatedOrder, ...localOrders.filter((o) => Number(o.id) !== numId)];
+      localStorage.setItem('lowkey_demo_orders', JSON.stringify(nextLocal));
+    } catch (e) {}
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: updatedOrder }));
@@ -532,8 +569,9 @@ class CloudSyncService {
                   if (payload) {
                     this.applyOrderEvent(payload);
                     this.notifyOrderListeners();
-                    if (typeof window !== 'undefined' && payload.order) {
-                      window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: payload.order }));
+                    const dispatchOrder = payload.order || (payload.orderId ? this.ordersMap.get(Number(payload.orderId)) : null);
+                    if (typeof window !== 'undefined' && dispatchOrder) {
+                      window.dispatchEvent(new CustomEvent('lowkey_order_update', { detail: dispatchOrder }));
                     }
                   }
                 }
